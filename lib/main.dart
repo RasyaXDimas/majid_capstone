@@ -1,4 +1,4 @@
-import 'package:capstone/splash_screen.dart';
+import 'package:capstone/pages/splash_screen.dart';
 import 'package:flutter/material.dart';
 
 void main() {

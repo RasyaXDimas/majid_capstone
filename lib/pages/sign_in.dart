@@ -1,3 +1,4 @@
+import 'package:capstone/pages/admin_dashboard.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:capstone/main.dart';
@@ -268,9 +269,9 @@ class _LoginPageState extends State<LoginPage> {
                     Navigator.push(
                             context,
                             MaterialPageRoute(
-                                builder: (context) => const LoginPage()),
+                                builder: (context) => const AdminDashboard()),
                           );
-                  }
+                  },
                   // _isLoading ? null : _login,
                   // child: _isLoading
                   //     ? const CircularProgressIndicator(
