@@ -236,22 +236,22 @@ class _LoginPageState extends State<LoginPage> {
                 ),
               ),
               const SizedBox(height: 8),
-              
+
               Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8),
-              child:  const Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                
-                children:[ Text(
-                  "lupa password?",
-                  textAlign: TextAlign.end,
-                  style: TextStyle(
-                            fontSize: 18,
-                            color: Colors.black54,
-                          ),
+                padding: const EdgeInsets.symmetric(horizontal: 8),
+                child: const Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      "lupa password?",
+                      textAlign: TextAlign.end,
+                      style: TextStyle(
+                        fontSize: 18,
+                        color: Colors.black54,
+                      ),
+                    ),
+                  ],
                 ),
-                ],
-              ),
               ),
               const SizedBox(height: 20),
               SizedBox(
@@ -260,28 +260,28 @@ class _LoginPageState extends State<LoginPage> {
                 child: ElevatedButton(
                   style: ElevatedButton.styleFrom(
                     shape: RoundedRectangleBorder(
-                      borderRadius:
-                          BorderRadius.circular(12), 
+                      borderRadius: BorderRadius.circular(12),
                     ),
                     elevation: 5,
                   ),
                   onPressed: () {
                     Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                                builder: (context) => const AdminDashboard()),
-                          );
+                      context,
+                      MaterialPageRoute(
+                          builder: (context) => const AdminDashboard()),
+                    );
+                    
                   },
                   // _isLoading ? null : _login,
                   // child: _isLoading
                   //     ? const CircularProgressIndicator(
                   //         color: Colors.white,
                   //       )
-                      // :
-                       child: const Text(
-                          'Login',
-                          style: TextStyle(fontSize: 18),
-                        ),
+                  // :
+                  child: const Text(
+                    'Login',
+                    style: TextStyle(fontSize: 18),
+                  ),
                 ),
               ),
             ],

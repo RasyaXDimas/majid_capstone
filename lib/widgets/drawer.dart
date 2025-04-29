@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import '../pages/admin_dashboard.dart';
 import '../pages/InventoryPage.dart';
 
-
 class DashboardDrawer extends StatelessWidget {
   final String selectedMenu;
 
@@ -117,7 +116,7 @@ class DashboardDrawer extends StatelessWidget {
             MaterialPageRoute(builder: (context) => const AdminDashboard()),
           );
         } else if (title == 'Inventaris' && !isActive) {
-          Navigator.pushReplacement(
+          Navigator.push(
             context,
             MaterialPageRoute(builder: (context) => const InventoryPage()),
           );
