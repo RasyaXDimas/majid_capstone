@@ -1,8 +1,16 @@
+import 'package:capstone/widgets/drawer.dart';
 import 'package:flutter/material.dart';
 
 class InventoryPage extends StatelessWidget {
   const InventoryPage({super.key});
 
+//  @override
+//   State<InventoryPage> createState() => _InventoryPageState();
+// }
+
+// class _InventoryPageState extends State<InventoryPage> {
+//   // Gunakan GlobalKey untuk Scaffold
+//   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
   @override
   Widget build(BuildContext context) {
     final List<Map<String, dynamic>> inventoryItems = [
@@ -39,13 +47,21 @@ class InventoryPage extends StatelessWidget {
     ];
 
     return Scaffold(
+      // key: _scaffoldKey,
+      drawer: const DashboardDrawer(selectedMenu: 'Inventaris'),
       appBar: AppBar(
         backgroundColor: const Color(0xff348E9C),
         title: const Text('Masjid Al-Waraq'),
         centerTitle: true,
-        leading: IconButton(
-          icon: const Icon(Icons.menu),
-          onPressed: () => Scaffold.of(context).openDrawer(),
+       leading: Builder(
+          builder: (BuildContext context) {
+            return IconButton(
+              icon: const Icon(Icons.menu),
+              onPressed: () {
+                Scaffold.of(context).openDrawer(); // Ini sekarang akan bekerja
+              },
+            );
+          },
         ),
       ),
       body: Padding(
