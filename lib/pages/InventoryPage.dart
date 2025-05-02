@@ -50,26 +50,26 @@ class _InventoryPageState extends State<InventoryPage> {
     },
   ];
 
-  List<Map<String, dynamic>> _getFilteredItems() {
-  return inventoryItems.where((item) {
-    // Filter by category
-    final categoryMatch = selectedCategoryFilter == 'Semua' || 
-                         item['category'] == selectedCategoryFilter;
+//   List<Map<String, dynamic>> _getFilteredItems() {
+//   return inventoryItems.where((item) {
+//     // Filter by category
+//     final categoryMatch = selectedCategoryFilter == 'Semua' || 
+//                          item['category'] == selectedCategoryFilter;
     
-    // Filter by status
-    final statusMatch = selectedStatusFilter == 'Semua' || 
-                       item['status'] == selectedStatusFilter;
+//     // Filter by status
+//     final statusMatch = selectedStatusFilter == 'Semua' || 
+//                        item['status'] == selectedStatusFilter;
     
-    // Filter by search query
-    final searchMatch = _searchQuery.isEmpty ||
-        item['name'].toString().toLowerCase().contains(_searchQuery.toLowerCase()) ||
-        item['id'].toString().toLowerCase().contains(_searchQuery.toLowerCase()) ||
-        item['category'].toString().toLowerCase().contains(_searchQuery.toLowerCase());
+//     // Filter by search query
+//     final searchMatch = _searchQuery.isEmpty ||
+//         item['name'].toString().toLowerCase().contains(_searchQuery.toLowerCase()) ||
+//         item['id'].toString().toLowerCase().contains(_searchQuery.toLowerCase()) ||
+//         item['category'].toString().toLowerCase().contains(_searchQuery.toLowerCase());
     
-    // Item must match all active filters
-    return categoryMatch && statusMatch && searchMatch;
-  }).toList();
-}
+//     // Item must match all active filters
+//     return categoryMatch && statusMatch && searchMatch;
+//   }).toList();
+// }
 
   @override
   void initState() {
@@ -97,7 +97,8 @@ class _InventoryPageState extends State<InventoryPage> {
       // Filter berdasarkan kategori
       final categoryMatch =
           selectedCategory == 'Semua' || item['category'] == selectedCategory;
-
+      final statusMatch = 
+          selectedStatusFilter == 'Semua' || item['status'] == selectedStatusFilter;
       // Filter berdasarkan kata kunci pencarian
       final searchMatch = _searchQuery.isEmpty ||
           item['name']
@@ -114,7 +115,7 @@ class _InventoryPageState extends State<InventoryPage> {
               .contains(_searchQuery.toLowerCase());
 
       // Item harus memenuhi kedua kriteria filter
-      return categoryMatch && searchMatch;
+      return categoryMatch && searchMatch && statusMatch;
     }).toList();
 
     return Scaffold(
