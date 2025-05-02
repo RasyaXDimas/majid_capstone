@@ -11,7 +11,7 @@ class AdminDashboard extends StatelessWidget {
       backgroundColor: Colors.white,
       appBar: AppBar(
         backgroundColor: const Color(0xff348E9C),
-        title: const Text('Masjid Al-Ikhlas'),
+        title: const Text('Masjid Al-Waraq'),
         centerTitle: true,
         leading: Builder(
           builder: (BuildContext context) {
