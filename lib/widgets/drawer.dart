@@ -1,6 +1,8 @@
 import 'package:capstone/pages/JadwalKajian.dart';
 import 'package:capstone/pages/donasiAdmin.dart';
+import 'package:capstone/pages/kelolaAdmin.dart';
 import 'package:capstone/pages/peminjamanBarang.dart';
+import 'package:capstone/pages/sign_in.dart';
 import 'package:flutter/material.dart';
 import '../pages/admin_dashboard.dart';
 import '../pages/InventoryPage.dart';
@@ -88,6 +90,11 @@ class DashboardDrawer extends StatelessWidget {
             ),
             onTap: () {
               // Aksi logout
+              Navigator.pop(context);
+              Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (context) => const LoginPage()),
+          );
             },
           ),
           const SizedBox(height: 15),
@@ -141,7 +148,7 @@ class DashboardDrawer extends StatelessWidget {
         } else if (title == 'Kelola Admin' && !isActive) {
           Navigator.pushReplacement(
             context,
-            MaterialPageRoute(builder: (context) => const AdminDashboard()),
+            MaterialPageRoute(builder: (context) => const Kelolaadmin()),
           );
         }
       },

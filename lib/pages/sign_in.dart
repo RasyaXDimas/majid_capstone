@@ -1,4 +1,5 @@
 import 'package:capstone/pages/admin_dashboard.dart';
+import 'package:capstone/pages/guest_dashboard.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:capstone/main.dart';
@@ -68,7 +69,7 @@ class SignInPage extends StatelessWidget {
                         Navigator.push(
                           context,
                           MaterialPageRoute(
-                              builder: (context) => const HalamanUtama()),
+                              builder: (context) => const GuestDashboard()),
                         );
                       },
                       child: const Padding(

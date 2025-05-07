@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
 class Donasiadmin extends StatelessWidget {
-  const Donasiadmin({Key? key}) : super(key: key);
+  const Donasiadmin({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -11,10 +11,10 @@ class Donasiadmin extends StatelessWidget {
       title: 'Masjid Al-Waraq',
       theme: ThemeData(
         primaryColor: const Color(0xff348E9C),
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: const Color(0xFF26A69A),
-          primary: const Color(0xff348E9C),
-        ),
+        // colorScheme: ColorScheme.fromSeed(
+        //   seedColor: const Color(0xFF26A69A),
+        //   primary: const Color(0xff348E9C),
+        // ),
         appBarTheme: const AppBarTheme(
           backgroundColor: const Color(0xff348E9C),
           foregroundColor: Colors.white,
@@ -43,7 +43,7 @@ class Donation {
 }
 
 class DonationManagementScreen extends StatefulWidget {
-  const DonationManagementScreen({Key? key}) : super(key: key);
+  const DonationManagementScreen({super.key});
 
   @override
   State<DonationManagementScreen> createState() =>
@@ -635,6 +635,7 @@ class _DonationManagementScreenState extends State<DonationManagementScreen> {
                 itemBuilder: (context, index) {
                   final donation = _filteredDonations[index];
                   return Card(
+                    color: Colors.white,
                     margin: const EdgeInsets.only(bottom: 8),
                     child: Padding(
                       padding: const EdgeInsets.all(16.0),
