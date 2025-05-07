@@ -1,3 +1,6 @@
+import 'package:capstone/pages/JadwalKajian.dart';
+import 'package:capstone/pages/donasiAdmin.dart';
+import 'package:capstone/pages/peminjamanBarang.dart';
 import 'package:flutter/material.dart';
 import '../pages/admin_dashboard.dart';
 import '../pages/InventoryPage.dart';
@@ -121,19 +124,19 @@ class DashboardDrawer extends StatelessWidget {
             MaterialPageRoute(builder: (context) => const InventoryPage()),
           );
         } else if (title == 'Kajian & Imam' && !isActive) {
-          Navigator.pushReplacement(
+          Navigator.push(
             context,
-            MaterialPageRoute(builder: (context) => const AdminDashboard()),
+            MaterialPageRoute(builder: (context) => const JadwalPage()),
           );
         } else if (title == 'Peminjaman Barang' && !isActive) {
           Navigator.pushReplacement(
             context,
-            MaterialPageRoute(builder: (context) => const AdminDashboard()),
+            MaterialPageRoute(builder: (context) => const PeminjamanBarangPage()),
           );
         } else if (title == 'Donasi' && !isActive) {
           Navigator.pushReplacement(
             context,
-            MaterialPageRoute(builder: (context) => const AdminDashboard()),
+            MaterialPageRoute(builder: (context) => const Donasiadmin()),
           );
         } else if (title == 'Kelola Admin' && !isActive) {
           Navigator.pushReplacement(
