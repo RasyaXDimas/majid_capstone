@@ -1,5 +1,5 @@
 import 'package:capstone/pages/admin_dashboard.dart';
-import '../widgets/drawer.dart';
+import '../widgets/drawerGuest.dart';
 import 'package:flutter/material.dart';
 
 class GuestDashboard extends StatelessWidget {
@@ -28,27 +28,44 @@ class DashboardPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      drawer: const GuestDrawer(selectedMenu: 'Dashboard'),
       appBar: AppBar(
         title: const Text(
-          'Masjid Al-Waqar', 
+          'Masjid Al-Waqar',
           style: TextStyle(
             color: Colors.white,
             fontWeight: FontWeight.bold,
           ),
         ),
+        centerTitle: true,
         backgroundColor: const Color(0xff348E9C),
-        leading: IconButton(
-          icon: const Icon(Icons.menu, color: Colors.white),
-          onPressed: () {},
+         leading: Builder(
+          builder: (BuildContext context) {
+            return IconButton(
+              icon: const Icon(
+                Icons.menu,
+                color: Colors.white,
+              ),
+              onPressed: () {
+                Scaffold.of(context).openDrawer(); // Ini sekarang akan bekerja
+              },
+            );
+          },
         ),
       ),
       body: SingleChildScrollView(
         child: Padding(
-          padding: const EdgeInsets.symmetric(vertical:125, horizontal: 16),
+          padding: const EdgeInsets.symmetric(vertical: 100, horizontal: 16),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisAlignment: MainAxisAlignment.center,
+            mainAxisAlignment: MainAxisAlignment.start,
             children: [
+              const Text(
+                'Dashboard',
+                style: TextStyle(fontSize: 30, fontWeight: FontWeight.bold),
+              ),
+
+              const SizedBox(height: 15),
               // Peminjaman Barang Card
               _buildDashboardCard(
                 context,
@@ -57,13 +74,14 @@ class DashboardPage extends StatelessWidget {
                 onTap: () {
                   Navigator.push(
                     context,
-                    MaterialPageRoute(builder: (context) => const AdminDashboard()),
+                    MaterialPageRoute(
+                        builder: (context) => const AdminDashboard()),
                   );
                 },
               ),
-              
+
               const SizedBox(height: 16),
-              
+
               // Jadwal Imam Card
               _buildDashboardCard(
                 context,
@@ -72,9 +90,9 @@ class DashboardPage extends StatelessWidget {
                 icon: Icons.calendar_today,
                 onTap: () {},
               ),
-              
+
               const SizedBox(height: 16),
-              
+
               // Pengumuman Card
               _buildDashboardCard(
                 context,
@@ -89,7 +107,7 @@ class DashboardPage extends StatelessWidget {
       ),
     );
   }
-  
+
   Widget _buildDashboardCard(
     BuildContext context, {
     required String title,
@@ -119,7 +137,8 @@ class DashboardPage extends StatelessWidget {
           onTap: onTap,
           borderRadius: BorderRadius.circular(16),
           child: Container(
-            padding: const EdgeInsets.symmetric(vertical: 30.0, horizontal: 24.0),
+            padding:
+                const EdgeInsets.symmetric(vertical: 30.0, horizontal: 24.0),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
@@ -130,7 +149,8 @@ class DashboardPage extends StatelessWidget {
                         Container(
                           padding: const EdgeInsets.all(12),
                           decoration: BoxDecoration(
-                            color: Theme.of(context).primaryColor.withOpacity(0.1),
+                            color:
+                                Theme.of(context).primaryColor.withOpacity(0.1),
                             borderRadius: BorderRadius.circular(12),
                           ),
                           child: Icon(
@@ -144,7 +164,8 @@ class DashboardPage extends StatelessWidget {
                         Container(
                           padding: const EdgeInsets.all(12),
                           decoration: BoxDecoration(
-                            color: Theme.of(context).primaryColor.withOpacity(0.1),
+                            color:
+                                Theme.of(context).primaryColor.withOpacity(0.1),
                             borderRadius: BorderRadius.circular(12),
                           ),
                           child: Icon(
@@ -184,7 +205,8 @@ class DashboardPage extends StatelessWidget {
                 ),
                 const SizedBox(width: 16),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
                   decoration: BoxDecoration(
                     color: Theme.of(context).primaryColor,
                     borderRadius: BorderRadius.circular(20),
@@ -206,6 +228,3 @@ class DashboardPage extends StatelessWidget {
     );
   }
 }
-
- 
- 

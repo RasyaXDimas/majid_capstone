@@ -103,6 +103,7 @@ class _JadwalPageState extends State<JadwalPage>
       length: 2,
       child: Scaffold(
         drawer: const DashboardDrawer(selectedMenu: 'Kajian & Imam'),
+        backgroundColor: Color(0xffF4F4F4),
         appBar: AppBar(
           backgroundColor: const Color(0xff348E9C),
           title: const Text('Masjid Al-Waraq'),

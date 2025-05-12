@@ -1,13 +1,9 @@
 import 'package:capstone/widgets/drawer.dart';
 import 'package:flutter/material.dart';
 
-// Main App
-void main() {
-  runApp(const MasjidApp());
-}
 
-class MasjidApp extends StatelessWidget {
-  const MasjidApp({Key? key}) : super(key: key);
+class PeminjamanBarang extends StatelessWidget {
+  const PeminjamanBarang({super.key});
 
   @override
   Widget build(BuildContext context) {
