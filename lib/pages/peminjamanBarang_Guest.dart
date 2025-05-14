@@ -162,14 +162,14 @@ class _PeminjamanBarangPageState extends State<PeminjamanBarangPage> {
           // Title
           Container(
             width: double.infinity,
-            color: const Color(0xff348E9C),
+            // color: const Color(0xff348E9C),
             padding: const EdgeInsets.all(16.0),
             child: const Text(
               'Peminjaman Barang',
               style: TextStyle(
                 fontSize: 24,
                 fontWeight: FontWeight.bold,
-                color: Colors.white,
+                color: Colors.black,
               ),
             ),
           ),
@@ -527,10 +527,10 @@ class BorrowingFormDialog extends StatefulWidget {
   final Function(String name, DateTime date, String description, String idCard) onSubmit;
 
   const BorrowingFormDialog({
-    Key? key,
+    super.key,
     required this.item,
     required this.onSubmit,
-  }) : super(key: key);
+  });
 
   @override
   State<BorrowingFormDialog> createState() => _BorrowingFormDialogState();

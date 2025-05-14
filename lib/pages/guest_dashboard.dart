@@ -1,4 +1,6 @@
 import 'package:capstone/pages/admin_dashboard.dart';
+import 'package:capstone/pages/jadwalKajian_guest.dart';
+import 'package:capstone/pages/pengajuanBarang_guest.dart';
 import '../widgets/drawerGuest.dart';
 import 'package:flutter/material.dart';
 
@@ -39,7 +41,7 @@ class DashboardPage extends StatelessWidget {
         ),
         centerTitle: true,
         backgroundColor: const Color(0xff348E9C),
-         leading: Builder(
+        leading: Builder(
           builder: (BuildContext context) {
             return IconButton(
               icon: const Icon(
@@ -75,7 +77,7 @@ class DashboardPage extends StatelessWidget {
                   Navigator.push(
                     context,
                     MaterialPageRoute(
-                        builder: (context) => const AdminDashboard()),
+                        builder: (context) => const PengajuanbarangGuest()),
                   );
                 },
               ),
@@ -88,7 +90,12 @@ class DashboardPage extends StatelessWidget {
                 title: 'Jadwal Imam',
                 subtitle: 'Senin, 22 Mei 2025\n18:30 - 19:30',
                 icon: Icons.calendar_today,
-                onTap: () {},
+                onTap: () {
+                  Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                          builder: (context) => const JadwalPageGuest()));
+                },
               ),
 
               const SizedBox(height: 16),

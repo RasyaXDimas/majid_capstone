@@ -1,6 +1,7 @@
 import 'package:capstone/pages/guest_dashboard.dart';
 import 'package:capstone/pages/jadwalKajian_guest.dart';
 import 'package:capstone/pages/peminjamanBarang_Guest.dart';
+import 'package:capstone/pages/pengajuanBarang_guest.dart';
 import 'package:capstone/pages/sign_in.dart';
 import 'package:flutter/material.dart';
 
@@ -121,10 +122,10 @@ class GuestDrawer extends StatelessWidget {
             context,
             MaterialPageRoute(builder: (context) => const PeminjamanbarangGuest()),
           );
-        } else if (title == 'Pengajuan Barang Barang' && !isActive) {
-          Navigator.pushReplacement(
+        } else if (title == 'Pengajuan Barang' && !isActive) {
+          Navigator.push(
             context,
-            MaterialPageRoute(builder: (context) => const GuestDashboard()),
+            MaterialPageRoute(builder: (context) => const PengajuanbarangGuest()),
           );
         }
       },
