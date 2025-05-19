@@ -1,8 +1,33 @@
+import 'package:capstone/pages/sign_in.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import '../widgets/drawer.dart';
 import 'package:flutter/material.dart';
 
-class AdminDashboard extends StatelessWidget {
+class AdminDashboard extends StatefulWidget {
   const AdminDashboard({super.key});
+
+  @override
+  State<AdminDashboard> createState() => _AdminDashboardState();
+}
+
+class _AdminDashboardState extends State<AdminDashboard> {
+  @override
+  void initState() {
+    super.initState();
+
+    final user = FirebaseAuth.instance.currentUser;
+
+    // Cek apakah user sudah login, kalau belum arahkan ke SignInPage
+    if (user == null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        Navigator.pushAndRemoveUntil(
+          context,
+          MaterialPageRoute(builder: (_) => const SignInPage()),
+          (route) => false,
+        );
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {

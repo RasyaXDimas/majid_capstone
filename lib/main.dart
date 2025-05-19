@@ -1,7 +1,17 @@
+import 'package:capstone/pages/admin_dashboard.dart';
+import 'package:capstone/pages/sign_in.dart';
 import 'package:capstone/pages/splash_screen.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'firebase_options.dart';
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
+
   runApp(const MyApp());
 }
 
@@ -17,43 +27,23 @@ class MyApp extends StatelessWidget {
   }
 }
 
-class HalamanUtama extends StatelessWidget {
-  const HalamanUtama({super.key});
+class AuthWrapper extends StatelessWidget {
+  const AuthWrapper({super.key});
+
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('Halaman Utama')),
-      body: Center(
-        child: ElevatedButton(
-          child: const Text('Ke Halaman Kedua'),
-          onPressed: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(builder: (context) => const HalamanKedua()),
-            );
-          },
-        ),
-      ),
-    );
-  }
-}
-
-
-
-class HalamanKedua extends StatelessWidget {
-  const HalamanKedua({super.key});
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('Halaman Kedua')),
-      body: Center(
-        child: ElevatedButton(
-          child: const Text('Kembali'),
-          onPressed: () {
-            Navigator.pop(context);
-          },
-        ),
-      ),
+    return StreamBuilder<User?>(
+      stream: FirebaseAuth.instance.authStateChanges(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Scaffold(
+              body: Center(child: CircularProgressIndicator()));
+        } else if (snapshot.hasData) {
+          return const AdminDashboard();
+        } else {
+          return const SignInPage();
+        }
+      },
     );
   }
 }

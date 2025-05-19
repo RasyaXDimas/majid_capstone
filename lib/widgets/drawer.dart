@@ -1,8 +1,10 @@
+import 'package:capstone/main.dart';
 import 'package:capstone/pages/JadwalKajian.dart';
 import 'package:capstone/pages/donasiAdmin.dart';
 import 'package:capstone/pages/kelolaAdmin.dart';
 import 'package:capstone/pages/peminjamanBarang.dart';
 import 'package:capstone/pages/sign_in.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import '../pages/admin_dashboard.dart';
 import '../pages/InventoryPage.dart';
@@ -88,13 +90,16 @@ class DashboardDrawer extends StatelessWidget {
               style: TextStyle(
                   color: Colors.red, fontSize: 20, fontWeight: FontWeight.w500),
             ),
-            onTap: () {
+            onTap: () async {
               // Aksi logout
               Navigator.pop(context);
-              Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(builder: (context) => const LoginPage()),
-          );
+              await FirebaseAuth.instance.signOut();
+
+              Navigator.pushAndRemoveUntil(
+                context,
+                MaterialPageRoute(builder: (_) => const SignInPage()),
+                (route) => false, // hapus semua halaman sebelumnya
+              );
             },
           ),
           const SizedBox(height: 15),
@@ -138,7 +143,8 @@ class DashboardDrawer extends StatelessWidget {
         } else if (title == 'Peminjaman Barang' && !isActive) {
           Navigator.pushReplacement(
             context,
-            MaterialPageRoute(builder: (context) => const PeminjamanBarangPage()),
+            MaterialPageRoute(
+                builder: (context) => const PeminjamanBarangPage()),
           );
         } else if (title == 'Donasi' && !isActive) {
           Navigator.pushReplacement(

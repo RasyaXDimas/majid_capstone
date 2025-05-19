@@ -2,7 +2,8 @@ import 'package:capstone/pages/admin_dashboard.dart';
 import 'package:capstone/pages/guest_dashboard.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
-import 'package:capstone/main.dart';
+import 'package:capstone/auth/auth_service.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class SignInPage extends StatelessWidget {
   const SignInPage({super.key});
@@ -106,30 +107,57 @@ class LoginPage extends StatefulWidget {
 }
 
 class _LoginPageState extends State<LoginPage> {
-  final _formKey = GlobalKey<FormState>();
   bool _isLoading = false;
   bool _isPasswordVisible = false;
 
-  final TextEditingController _emailController = TextEditingController();
-  final TextEditingController _passwordController = TextEditingController();
+  final _emailController = TextEditingController();
+  final _passwordController = TextEditingController();
+  final AuthService _authService = AuthService();
 
-  void _login() {
-    if (_formKey.currentState!.validate()) {
-      setState(() {
-        _isLoading = true;
-      });
 
-      // Simulasi loading
-      Future.delayed(const Duration(seconds: 2), () {
-        setState(() {
-          _isLoading = false;
-        });
-        // Setelah sukses login, bisa navigate ke halaman lain
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Login berhasil!')),
-        );
-      });
+  Future<void> _login() async {
+   final email = _emailController.text.trim();
+  final password = _passwordController.text.trim();
+
+  if (email.isEmpty || password.isEmpty) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text("Username dan password tidak boleh kosong"),
+        backgroundColor: Colors.red,
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
+    return;
+  }
+
+  try {
+    await AuthService().signInWithEmailAndPassword(email, password);
+
+    // Jika login sukses, arahkan ke AdminDashboard
+    if (mounted) {
+      Navigator.pushAndRemoveUntil(
+        context,
+        MaterialPageRoute(builder: (_) => const AdminDashboard()),
+        (route) => false,
+      );
     }
+  } on FirebaseAuthException catch (e) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text("Login gagal: ${e.message}"),
+        backgroundColor: Colors.red,
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
+  } catch (e) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text("Terjadi kesalahan: $e"),
+        backgroundColor: Colors.red,
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
+  }
   }
 
   @override
@@ -265,21 +293,23 @@ class _LoginPageState extends State<LoginPage> {
                     ),
                     elevation: 5,
                   ),
-                  onPressed: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                          builder: (context) => const AdminDashboard()),
-                    );
-                    
-                  },
+                  onPressed: _isLoading
+                      ? null 
+                      : () async {
+                          setState(() => _isLoading = true);
+                          try {
+                            await _login(); // fungsi yang sudah kamu buat
+                          } finally {
+                            setState(() => _isLoading = false);
+                          }
+                        },
                   // _isLoading ? null : _login,
-                  // child: _isLoading
-                  //     ? const CircularProgressIndicator(
-                  //         color: Colors.white,
-                  //       )
-                  // :
-                  child: const Text(
+                  child: _isLoading
+                      ? const CircularProgressIndicator(
+                          color: Colors.white,
+                        )
+                  :
+                  const Text(
                     'Login',
                     style: TextStyle(fontSize: 18),
                   ),
@@ -291,4 +321,6 @@ class _LoginPageState extends State<LoginPage> {
       ),
     );
   }
+
+  
 }

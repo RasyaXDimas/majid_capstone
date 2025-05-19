@@ -1,3 +1,5 @@
+import 'package:capstone/pages/admin_dashboard.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'dart:async';
 import 'package:flutter_svg/flutter_svg.dart';
@@ -15,10 +17,21 @@ class _SplashScreenState extends State<SplashScreen> {
   void initState() {
     super.initState();
     Timer(const Duration(seconds: 3), () {
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (_) => const SignInPage()),
-      );
+       final user = FirebaseAuth.instance.currentUser;
+
+      if (user != null) {
+        // User sudah login, masuk ke AdminDashboard
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (_) => const AdminDashboard()),
+        );
+      } else {
+        // Belum login, masuk ke SignInPage
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (_) => const SignInPage()),
+        );
+      }
     });
   }
 
