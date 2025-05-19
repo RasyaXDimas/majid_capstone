@@ -3,6 +3,7 @@
 import 'package:firebase_core/firebase_core.dart' show FirebaseOptions;
 import 'package:flutter/foundation.dart'
     show defaultTargetPlatform, kIsWeb, TargetPlatform;
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 /// Default [FirebaseOptions] for use with your Firebase apps.
 ///
@@ -40,8 +41,8 @@ class DefaultFirebaseOptions {
     }
   }
 
-  static const FirebaseOptions web = FirebaseOptions(
-    apiKey: 'AIzaSyCzvv5kTR-FJTQwPqfDZaIOk6SN8JVUeaA',
+  static final FirebaseOptions web = FirebaseOptions(
+    apiKey: dotenv.env['GOOGLE_API_KEY'] ?? "DEFAULT_KEY",
     appId: '1:1035202572787:web:6d5a2b4d7394d18f5aa286',
     messagingSenderId: '1035202572787',
     projectId: 'capstone-ti-1',
@@ -50,16 +51,16 @@ class DefaultFirebaseOptions {
     measurementId: 'G-3TJBV8ZVTV',
   );
 
-  static const FirebaseOptions android = FirebaseOptions(
-    apiKey: 'AIzaSyAbJVujm_Tg3usdUzzt-8e4cRuJV8OZiXg',
+  static final FirebaseOptions android = FirebaseOptions(
+    apiKey: dotenv.env['GOOGLE_API_KEY'] ?? "DEFAULT_KEY",
     appId: '1:1035202572787:android:43849d25e8bfc6445aa286',
     messagingSenderId: '1035202572787',
     projectId: 'capstone-ti-1',
     storageBucket: 'capstone-ti-1.firebasestorage.app',
   );
 
-  static const FirebaseOptions ios = FirebaseOptions(
-    apiKey: 'AIzaSyC0kzgz_PqTmRTch1OdOD_8iK7I13C0VAA',
+  static final FirebaseOptions ios = FirebaseOptions(
+    apiKey: dotenv.env['GOOGLE_API_KEY'] ?? "DEFAULT_KEY",
     appId: '1:1035202572787:ios:23c2c87cc6734f385aa286',
     messagingSenderId: '1035202572787',
     projectId: 'capstone-ti-1',
@@ -67,8 +68,8 @@ class DefaultFirebaseOptions {
     iosBundleId: 'com.example.capstone',
   );
 
-  static const FirebaseOptions macos = FirebaseOptions(
-    apiKey: 'AIzaSyC0kzgz_PqTmRTch1OdOD_8iK7I13C0VAA',
+  static final FirebaseOptions macos = FirebaseOptions(
+    apiKey: dotenv.env['GOOGLE_API_KEY'] ?? "DEFAULT_KEY",
     appId: '1:1035202572787:ios:23c2c87cc6734f385aa286',
     messagingSenderId: '1035202572787',
     projectId: 'capstone-ti-1',
@@ -76,8 +77,8 @@ class DefaultFirebaseOptions {
     iosBundleId: 'com.example.capstone',
   );
 
-  static const FirebaseOptions windows = FirebaseOptions(
-    apiKey: 'AIzaSyCzvv5kTR-FJTQwPqfDZaIOk6SN8JVUeaA',
+  static final FirebaseOptions windows = FirebaseOptions(
+    apiKey: dotenv.env['GOOGLE_API_KEY'] ?? "DEFAULT_KEY",
     appId: '1:1035202572787:web:787a948900f230885aa286',
     messagingSenderId: '1035202572787',
     projectId: 'capstone-ti-1',
