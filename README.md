@@ -187,7 +187,7 @@ majid-app/
 ## 📱 Screenshots & Demo
 
 ### Figma Prototype
-[Figma Prototype Link](link-prototype-figma)
+[Figma Prototype Link](https://www.figma.com/proto/pDAhldtyQH6RlAL2YkuUiz/UI-UX-Majid-FIX?node-id=0-1&p=f&viewport=-1447%2C-1843%2C0.05&t=zVfXMLtrUiYbMJMF-0&scaling=scale-down&content-scaling=fixed&starting-point-node-id=4058%3A3181&show-proto-sidebar=1)
 
 ### Presentation Video
 [Demo Video](https://drive.google.com/drive/folders/1yHA-Q0U9TeEZKMw7hWJ4pSx3WsmmQ8-z?usp=sharing)
