@@ -4,6 +4,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:capstone/auth/auth_service.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+// Import AdminService untuk login Firestore
+import 'package:capstone/admin_service.dart';
+import 'package:capstone/data/model.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:capstone/auth/admin_auth_service.dart'; // TAMBAHKAN INI
 
 class SignInPage extends StatelessWidget {
   const SignInPage({super.key});
@@ -113,51 +118,133 @@ class _LoginPageState extends State<LoginPage> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final AuthService _authService = AuthService();
+  final AdminAuthService _adminAuthService = AdminAuthService();
 
+  @override
+  void dispose() {
+    _emailController.dispose();
+    _passwordController.dispose();
+    super.dispose();
+  }
 
   Future<void> _login() async {
-   final email = _emailController.text.trim();
-  final password = _passwordController.text.trim();
+    final email = _emailController.text.trim();
+    final password = _passwordController.text.trim();
 
-  if (email.isEmpty || password.isEmpty) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text("Username dan password tidak boleh kosong"),
-        backgroundColor: Colors.red,
-        behavior: SnackBarBehavior.floating,
-      ),
-    );
-    return;
-  }
-
-  try {
-    await AuthService().signInWithEmailAndPassword(email, password);
-
-    // Jika login sukses, arahkan ke AdminDashboard
-    if (mounted) {
-      Navigator.pushAndRemoveUntil(
-        context,
-        MaterialPageRoute(builder: (_) => const AdminDashboard()),
-        (route) => false,
-      );
+    if (email.isEmpty || password.isEmpty) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text("Username dan password tidak boleh kosong"),
+            backgroundColor: Colors.red,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+      return;
     }
-  } on FirebaseAuthException catch (e) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text("Login gagal: ${e.message}"),
-        backgroundColor: Colors.red,
-        behavior: SnackBarBehavior.floating,
-      ),
-    );
-  } catch (e) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text("Terjadi kesalahan: $e"),
-        backgroundColor: Colors.red,
-        behavior: SnackBarBehavior.floating,
-      ),
-    );
-  }
+
+    setState(() => _isLoading = true);
+
+    try {
+      print("Mencoba login dengan email: $email"); // Debug log
+      // Pertama coba login dengan Firestore admin collection
+      Admin? admin = await AdminService.verifyAdminLogin(email, password);
+      bool loginSukses = await _adminAuthService.signInAdmin(email, password);
+
+      print("Hasil admin dari Firestore: $admin");
+      print(
+          "Hasil login admin dari AdminAuthService: $loginSukses"); // Debug log
+
+      if (loginSukses) {
+        print("Admin login berhasil melalui AdminAuthService.");
+        if (admin != null) {
+          print("Admin ditemukan di Firestore: ${admin.name}"); // Debug log
+
+          // PERBAIKAN: Simpan status login ke SharedPreferences
+          final prefs = await SharedPreferences.getInstance();
+          await prefs.setBool('isAdminLoggedIn', true);
+          await prefs.setString('adminEmail', admin.email);
+          await prefs.setString('adminName', admin.name);
+        }
+        // Jika admin ditemukan di Firestore, arahkan ke AdminDashboard
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text("Login berhasil sebagai ${admin?.name}"),
+              backgroundColor: Colors.green,
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+
+          // Delay sedikit untuk memastikan SnackBar tampil
+          await Future.delayed(Duration(milliseconds: 500));
+
+          Navigator.pushAndRemoveUntil(
+            context,
+            MaterialPageRoute(builder: (_) => const AdminDashboard()),
+            (route) => false,
+          );
+        }
+        return;
+      }
+
+      print(
+          "Admin tidak ditemukan di Firestore, mencoba Firebase Auth"); // Debug log
+
+      // Jika tidak ditemukan di Firestore, coba dengan Firebase Auth
+      try {
+        await AuthService().signInWithEmailAndPassword(email, password);
+
+        print("Login Firebase Auth berhasil"); // Debug log
+
+        // PERBAIKAN: Untuk Firebase Auth, tidak perlu set SharedPreferences karena
+        // AdminDashboard sudah handle Firebase Auth state
+
+        // Jika login Firebase Auth sukses, arahkan ke AdminDashboard
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text("Login berhasil dengan Firebase Auth"),
+              backgroundColor: Colors.green,
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+
+          // Delay sedikit untuk memastikan SnackBar tampil
+          await Future.delayed(Duration(milliseconds: 500));
+
+          Navigator.pushAndRemoveUntil(
+            context,
+            MaterialPageRoute(builder: (_) => const AdminDashboard()),
+            (route) => false,
+          );
+        }
+      } on FirebaseAuthException catch (e) {
+        print("Firebase Auth error: ${e.message}"); // Debug log
+        // Jika Firebase Auth juga gagal, tampilkan pesan error
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text("Login gagal: Email atau password salah"),
+              backgroundColor: Colors.red,
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      print("Error dalam login: $e"); // Debug log
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text("Login gagal: ${e.toString()}"),
+            backgroundColor: Colors.red,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    }
   }
 
   @override
@@ -201,7 +288,7 @@ class _LoginPageState extends State<LoginPage> {
                 ),
                 child: TextFormField(
                   controller: _emailController,
-                  keyboardType: TextInputType.name,
+                  keyboardType: TextInputType.emailAddress,
                   decoration: InputDecoration(
                     labelText: 'Username',
                     prefixIcon: const Icon(Icons.person),
@@ -212,7 +299,8 @@ class _LoginPageState extends State<LoginPage> {
                   validator: (value) {
                     if (value == null || value.isEmpty) {
                       return 'Email tidak boleh kosong';
-                    } else if (!value.contains('@')) {
+                    }
+                    if (!value.contains('@')) {
                       return 'Masukkan email yang valid';
                     }
                     return null;
@@ -294,13 +382,17 @@ class _LoginPageState extends State<LoginPage> {
                     elevation: 5,
                   ),
                   onPressed: _isLoading
-                      ? null 
+                      ? null
                       : () async {
-                          setState(() => _isLoading = true);
+                          if (mounted) {
+                            setState(() => _isLoading = true);
+                          }
                           try {
-                            await _login(); // fungsi yang sudah kamu buat
+                            await _login();
                           } finally {
-                            setState(() => _isLoading = false);
+                            if (mounted) {
+                              setState(() => _isLoading = false);
+                            }
                           }
                         },
                   // _isLoading ? null : _login,
@@ -308,11 +400,10 @@ class _LoginPageState extends State<LoginPage> {
                       ? const CircularProgressIndicator(
                           color: Colors.white,
                         )
-                  :
-                  const Text(
-                    'Login',
-                    style: TextStyle(fontSize: 18),
-                  ),
+                      : const Text(
+                          'Login',
+                          style: TextStyle(fontSize: 18),
+                        ),
                 ),
               ),
             ],
@@ -321,6 +412,4 @@ class _LoginPageState extends State<LoginPage> {
       ),
     );
   }
-
-  
 }

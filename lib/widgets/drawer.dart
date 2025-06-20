@@ -1,4 +1,3 @@
-import 'package:capstone/main.dart';
 import 'package:capstone/pages/JadwalKajian.dart';
 import 'package:capstone/pages/donasiAdmin.dart';
 import 'package:capstone/pages/kelolaAdmin.dart';
@@ -144,7 +143,7 @@ class DashboardDrawer extends StatelessWidget {
           Navigator.pushReplacement(
             context,
             MaterialPageRoute(
-                builder: (context) => const PeminjamanBarangPage()),
+                builder: (context) => const PeminjamanBarang()),
           );
         } else if (title == 'Donasi' && !isActive) {
           Navigator.pushReplacement(

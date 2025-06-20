@@ -71,7 +71,7 @@ class GuestDrawer extends StatelessWidget {
           ListTile(
             leading: const Icon(Icons.logout, color: Colors.red),
             title: const Text(
-              'Logout',
+              'Keluar',
               style: TextStyle(
                   color: Colors.red, fontSize: 20, fontWeight: FontWeight.w500),
             ),
@@ -80,7 +80,7 @@ class GuestDrawer extends StatelessWidget {
               Navigator.pop(context);
               Navigator.pushReplacement(
             context,
-            MaterialPageRoute(builder: (context) => const LoginPage()),
+            MaterialPageRoute(builder: (context) => const SignInPage()),
           );
             },
           ),

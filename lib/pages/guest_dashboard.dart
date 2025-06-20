@@ -1,7 +1,9 @@
 import 'package:capstone/pages/jadwalKajian_guest.dart';
 import 'package:capstone/pages/pengajuanBarang_guest.dart';
-import '../widgets/drawerGuest.dart';
+import 'package:capstone/widgets/drawerGuest.dart';
+import 'package:capstone/data/model.dart' as Models;
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class GuestDashboard extends StatelessWidget {
   const GuestDashboard({super.key});
@@ -68,32 +70,80 @@ class DashboardPage extends StatelessWidget {
 
               const SizedBox(height: 15),
               // Peminjaman Barang Card
-              _buildDashboardCard(
-                context,
-                title: 'Peminjaman Barang',
-                subtitle: 'Disetujui : 1',
-                onTap: () {
-                  Navigator.push(
+              StreamBuilder<QuerySnapshot>(
+                stream: FirebaseFirestore.instance
+                    .collection('peminjaman')
+                    .where('status', isEqualTo: 'disetujui')
+                    .snapshots(),
+                builder: (context, snapshot) {
+                  int approvedCount = 0;
+                  if (snapshot.hasData) {
+                    // Convert documents to PeminjamanItem objects and count approved ones
+                    final peminjamanList = snapshot.data!.docs
+                        .map((doc) => Models.PeminjamanItem.fromFirestore(doc))
+                        .where((item) => item.status == 'Disetujui')
+                        .toList();
+                    approvedCount = peminjamanList.length;
+                  }
+                  
+                  return _buildDashboardCard(
                     context,
-                    MaterialPageRoute(
-                        builder: (context) => const PengajuanbarangGuest()),
+                    title: 'Peminjaman Barang',
+                    subtitle: 'Disetujui : $approvedCount',
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                            builder: (context) => const PengajuanbarangGuest()),
+                      );
+                    },
                   );
                 },
               ),
 
               const SizedBox(height: 16),
 
-              // Jadwal Imam Card
-              _buildDashboardCard(
-                context,
-                title: 'Jadwal Imam',
-                subtitle: 'Senin, 22 Mei 2025\n18:30 - 19:30',
-                icon: Icons.calendar_today,
-                onTap: () {
-                  Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                          builder: (context) => const JadwalPageGuest()));
+              // Jadwal Kajian Card
+              StreamBuilder<QuerySnapshot>(
+                stream: FirebaseFirestore.instance
+                    .collection('kajian')
+                    .orderBy('tanggal', descending: false)
+                    .limit(1)
+                    .snapshots(),
+                builder: (context, snapshot) {
+                  String scheduleInfo = 'Tidak ada jadwal';
+                  
+                  if (snapshot.hasData && snapshot.data!.docs.isNotEmpty) {
+                    // Convert document to Kajian object using the model
+                    final kajian = Models.Kajian.fromFirestore(snapshot.data!.docs.first);
+                    
+                    // Format tanggal dan waktu menggunakan data dari model
+                    var date = kajian.tanggal;
+                    var dayNames = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
+                    var monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
+                    
+                    var dayName = dayNames[date.weekday % 7];
+                    var day = date.day;
+                    var month = monthNames[date.month - 1];
+                    var year = date.year;
+                    var hour = date.hour.toString().padLeft(2, '0');
+                    var minute = date.minute.toString().padLeft(2, '0');
+                    
+                    scheduleInfo = '$dayName, $day $month $year\n$hour:$minute - Ustadz ${kajian.ustadz}\n${kajian.judul}';
+                  }
+                  
+                  return _buildDashboardCard(
+                    context,
+                    title: 'Jadwal Kajian',
+                    subtitle: scheduleInfo,
+                    icon: Icons.calendar_today,
+                    onTap: () {
+                      Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                              builder: (context) => const JadwalPageGuest()));
+                    },
+                  );
                 },
               ),
 

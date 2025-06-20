@@ -1,5 +1,8 @@
 import 'package:capstone/widgets/drawer.dart';
+import 'package:capstone/data/model.dart'; // Import model yang sudah dibuat
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:intl/intl.dart';
 
 class JadwalPage extends StatefulWidget {
   const JadwalPage({super.key});
@@ -11,10 +14,29 @@ class JadwalPage extends StatefulWidget {
 class _JadwalPageState extends State<JadwalPage>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+
+  // Stream untuk real-time updates
+  Stream<QuerySnapshot>? _kajianStream;
+  Stream<QuerySnapshot>? _jadwalImamStream;
+
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
+    _initializeStreams();
+  }
+
+  void _initializeStreams() {
+    _kajianStream = _firestore
+        .collection('kajian')
+        .orderBy('tanggal', descending: false)
+        .snapshots();
+
+    _jadwalImamStream = _firestore
+        .collection('jadwalImam')
+        .orderBy('waktu', descending: false)
+        .snapshots();
   }
 
   @override
@@ -33,69 +55,128 @@ class _JadwalPageState extends State<JadwalPage>
     }
   }
 
-  void _onEditJadwalPressed(Map<String, String> data) {
-  if (_tabController.index == 0) {
-    _showEditJadwalKajianDialog(context, data);
-  } else {
-    _showEditJadwalImamDialog(context, data);
+  void _onEditJadwalPressed(dynamic data, String docId) {
+    if (_tabController.index == 0) {
+      _showEditJadwalKajianDialog(context, data, docId);
+    } else {
+      _showEditJadwalImamDialog(context, data, docId);
+    }
   }
-}
 
+  // Method untuk menambah kajian ke Firestore
+  Future<void> _addKajianToFirestore(Kajian kajian) async {
+    try {
+      await _firestore.collection('kajian').add(kajian.toMap());
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Jadwal kajian berhasil ditambahkan'),
+          backgroundColor: Colors.green,
+          duration: Duration(seconds: 2),
+        ),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error: $e'),
+          backgroundColor: Colors.red,
+          duration: const Duration(seconds: 2),
+        ),
+      );
+    }
+  }
 
-  List<Map<String, String>> jadwalKajian = const [
-    {
-      'judul': 'Memahami Surah Al-Kahfi',
-      'hariTanggal': 'Senin, 15 Mei 2025',
-      'waktu': '18:30 - 19:30',
-      'ustadz': 'Ustadz Abdullah',
-    },
-    {
-      'judul': 'Pentingnya Shalat',
-      'hariTanggal': 'Jumat, 19 Mei 2025',
-      'waktu': '20:00 - 21:00',
-      'ustadz': 'Ustadz Mahmud',
-    },
-    {
-      'judul': 'Kisah Para Nabi',
-      'hariTanggal': 'Minggu, 21 Mei 2025',
-      'waktu': '10:00 - 11:30',
-      'ustadz': 'Ustadz Ibrahim',
-    },
-    {
-      'judul': 'Fiqih Puasa',
-      'hariTanggal': 'Rabu, 24 Mei 2025',
-      'waktu': '19:30 - 20:30',
-      'ustadz': 'Ustadz Muhammad',
-    },
-  ];
+  // Method untuk menambah jadwal imam ke Firestore
+  Future<void> _addJadwalImamToFirestore(JadwalImam jadwalImam) async {
+    try {
+      await _firestore.collection('jadwalImam').add(jadwalImam.toMap());
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Jadwal imam berhasil ditambahkan'),
+          backgroundColor: Colors.green,
+          duration: Duration(seconds: 2),
+        ),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error: $e'),
+          backgroundColor: Colors.red,
+          duration: const Duration(seconds: 2),
+        ),
+      );
+    }
+  }
 
-  List<Map<String, String>> jadwalImam = const [
-    {
-      'sholat': 'Sholat Subuh',
-      'waktu': '04:30 AM',
-      'ustadz': 'Ustadz Abdullah',
-    },
-    {
-      'sholat': 'Sholat Dhuhr',
-      'waktu': '12:30 PM',
-      'ustadz': 'Ustadz Mahmud',
-    },
-    {
-      'sholat': 'Sholat Asr',
-      'waktu': '03:45 PM',
-      'ustadz': 'Ustadz Ibrahim',
-    },
-    {
-      'sholat': 'Sholat Magrib',
-      'waktu': '06:15 PM',
-      'ustadz': 'Ustadz Muhammad',
-    },
-    {
-      'sholat': 'Sholat Isya',
-      'waktu': '07:45 PM',
-      'ustadz': 'Ustadz Muhammad',
-    },
-  ];
+  // Method untuk update kajian
+  Future<void> _updateKajianInFirestore(String docId, Kajian kajian) async {
+    try {
+      await _firestore.collection('kajian').doc(docId).update(kajian.toMap());
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Jadwal kajian berhasil diperbarui'),
+          backgroundColor: Colors.green,
+          duration: Duration(seconds: 2),
+        ),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error: $e'),
+          backgroundColor: Colors.red,
+          duration: const Duration(seconds: 2),
+        ),
+      );
+    }
+  }
+
+  // Method untuk update jadwal imam
+  Future<void> _updateJadwalImamInFirestore(
+      String docId, JadwalImam jadwalImam) async {
+    try {
+      await _firestore
+          .collection('jadwalImam')
+          .doc(docId)
+          .update(jadwalImam.toMap());
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Jadwal imam berhasil diperbarui'),
+          backgroundColor: Colors.green,
+          duration: Duration(seconds: 2),
+        ),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error: $e'),
+          backgroundColor: Colors.red,
+          duration: const Duration(seconds: 2),
+        ),
+      );
+    }
+  }
+
+  // Method untuk delete dari Firestore
+  Future<void> _deleteFromFirestore(
+      String collection, String docId, String itemName) async {
+    try {
+      await _firestore.collection(collection).doc(docId).delete();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('$itemName berhasil dihapus'),
+          backgroundColor: Colors.green,
+          duration: const Duration(seconds: 2),
+        ),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error: $e'),
+          backgroundColor: Colors.red,
+          duration: const Duration(seconds: 2),
+        ),
+      );
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -103,7 +184,7 @@ class _JadwalPageState extends State<JadwalPage>
       length: 2,
       child: Scaffold(
         drawer: const DashboardDrawer(selectedMenu: 'Kajian & Imam'),
-        backgroundColor: Color(0xffF4F4F4),
+        backgroundColor: const Color(0xffF4F4F4),
         appBar: AppBar(
           backgroundColor: const Color(0xff348E9C),
           title: const Text('Masjid Al-Waraq'),
@@ -113,8 +194,7 @@ class _JadwalPageState extends State<JadwalPage>
               return IconButton(
                 icon: const Icon(Icons.menu),
                 onPressed: () {
-                  Scaffold.of(context)
-                      .openDrawer(); // Ini sekarang akan bekerja
+                  Scaffold.of(context).openDrawer();
                 },
               );
             },
@@ -149,9 +229,9 @@ class _JadwalPageState extends State<JadwalPage>
               const SizedBox(height: 16),
               TabBar(
                 controller: _tabController,
-                labelColor: Color(0xff348E9C),
+                labelColor: const Color(0xff348E9C),
                 unselectedLabelColor: Colors.black54,
-                indicatorColor: Color(0xff348E9C),
+                indicatorColor: const Color(0xff348E9C),
                 tabs: const [
                   Tab(text: 'Jadwal Kajian'),
                   Tab(text: 'Jadwal Imam'),
@@ -162,26 +242,84 @@ class _JadwalPageState extends State<JadwalPage>
                 child: TabBarView(
                   controller: _tabController,
                   children: [
-                    ListView.builder(
-                      itemCount: jadwalKajian.length,
-                      itemBuilder: (context, index) {
-                        final item = jadwalKajian[index];
-                        return _buildCard(
-                          title: item['judul']!,
-                          subtitle:
-                              '${item['hariTanggal']}\n${item['waktu']}\n${item['ustadz']}',
-                          data: item,
+                    // Tab Jadwal Kajian
+                    StreamBuilder<QuerySnapshot>(
+                      stream: _kajianStream,
+                      builder: (context, snapshot) {
+                        if (snapshot.hasError) {
+                          return Center(
+                              child: Text('Error: ${snapshot.error}'));
+                        }
+
+                        if (snapshot.connectionState ==
+                            ConnectionState.waiting) {
+                          return const Center(
+                              child: CircularProgressIndicator());
+                        }
+
+                        final kajianDocs = snapshot.data?.docs ?? [];
+
+                        if (kajianDocs.isEmpty) {
+                          return const Center(
+                            child: Text(
+                              'Tidak ada jadwal kajian',
+                              style:
+                                  TextStyle(fontSize: 16, color: Colors.grey),
+                            ),
+                          );
+                        }
+
+                        return ListView.builder(
+                          itemCount: kajianDocs.length,
+                          itemBuilder: (context, index) {
+                            final doc = kajianDocs[index];
+                            final kajian = Kajian.fromFirestore(doc);
+                            return _buildKajianCard(
+                              kajian: kajian,
+                              docId: doc.id,
+                            );
+                          },
                         );
                       },
                     ),
-                    ListView.builder(
-                      itemCount: jadwalImam.length,
-                      itemBuilder: (context, index) {
-                        final item = jadwalImam[index];
-                        return _buildCard(
-                          title: item['sholat']!,
-                          subtitle: '${item['waktu']}\n${item['ustadz']}',
-                          data: item,
+                    // Tab Jadwal Imam
+                    StreamBuilder<QuerySnapshot>(
+                      stream: _jadwalImamStream,
+                      builder: (context, snapshot) {
+                        if (snapshot.hasError) {
+                          return Center(
+                              child: Text('Error: ${snapshot.error}'));
+                        }
+
+                        if (snapshot.connectionState ==
+                            ConnectionState.waiting) {
+                          return const Center(
+                              child: CircularProgressIndicator());
+                        }
+
+                        final jadwalImamDocs = snapshot.data?.docs ?? [];
+
+                        if (jadwalImamDocs.isEmpty) {
+                          return const Center(
+                            child: Text(
+                              'Tidak ada jadwal imam',
+                              style:
+                                  TextStyle(fontSize: 16, color: Colors.grey),
+                            ),
+                          );
+                        }
+
+                        return ListView.builder(
+                          itemCount: jadwalImamDocs.length,
+                          itemBuilder: (context, index) {
+                            final doc = jadwalImamDocs[index];
+                            final jadwalImam = JadwalImam.fromFirestore(doc);
+
+                            return _buildJadwalImamCard(
+                              jadwalImam: jadwalImam,
+                              docId: doc.id,
+                            );
+                          },
                         );
                       },
                     ),
@@ -195,34 +333,76 @@ class _JadwalPageState extends State<JadwalPage>
     );
   }
 
-  Widget _buildCard({
-    required String title,
-    required String subtitle,
-    required Map<String, String> data,
+  Widget _buildKajianCard({
+    required Kajian kajian,
+    required String docId,
   }) {
+    final formattedDate =
+        DateFormat('EEEE, dd MMMM yyyy', 'id_ID').format(kajian.tanggal);
+    final formattedTime = DateFormat('HH:mm').format(kajian.tanggal);
+
     return Card(
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(10),
       ),
       margin: const EdgeInsets.only(bottom: 12),
+      color: Colors.white,
       elevation: 2,
       child: ListTile(
-        title: Text(title,
+        title: Text(kajian.judul,
             style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-        subtitle: Text(subtitle),
+        subtitle: Text('$formattedDate - $formattedTime\n${kajian.ustadz}'),
         trailing: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
             IconButton(
               icon: const Icon(Icons.edit, color: Colors.blueAccent),
               onPressed: () {
-                _onEditJadwalPressed(data);
+                _onEditJadwalPressed(kajian, docId);
               },
             ),
             IconButton(
               icon: const Icon(Icons.delete, color: Colors.red),
               onPressed: () {
-                _showDeleteConfirmationDialog(context, data);
+                _showDeleteConfirmationDialog(
+                    context, kajian.judul, 'kajian', docId);
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildJadwalImamCard({
+    required JadwalImam jadwalImam,
+    required String docId,
+  }) {
+    return Card(
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(10),
+      ),
+      margin: const EdgeInsets.only(bottom: 12),
+      color: Colors.white,
+      elevation: 2,
+      child: ListTile(
+        title: Text(jadwalImam.jadwalSholat,
+            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+        subtitle: Text('${jadwalImam.waktu}\n${jadwalImam.ustadz}'),
+        trailing: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            IconButton(
+              icon: const Icon(Icons.edit, color: Colors.blueAccent),
+              onPressed: () {
+                _onEditJadwalPressed(jadwalImam, docId);
+              },
+            ),
+            IconButton(
+              icon: const Icon(Icons.delete, color: Colors.red),
+              onPressed: () {
+                _showDeleteConfirmationDialog(
+                    context, jadwalImam.jadwalSholat, 'jadwalImam', docId);
               },
             ),
           ],
@@ -292,7 +472,7 @@ class _JadwalPageState extends State<JadwalPage>
                       controller: TextEditingController(
                         text: selectedDate == null
                             ? ''
-                            : '${selectedDate!.day}/${selectedDate!.month}/${selectedDate!.year}',
+                            : DateFormat('dd/MM/yyyy').format(selectedDate!),
                       ),
                     ),
                     const SizedBox(height: 12),
@@ -300,7 +480,7 @@ class _JadwalPageState extends State<JadwalPage>
                       readOnly: true,
                       decoration: const InputDecoration(
                         labelText: 'Waktu',
-                        hintText: '--:--',
+                        hintText: 'HH:mm',
                         suffixIcon: Icon(Icons.access_time),
                       ),
                       onTap: () async {
@@ -317,7 +497,7 @@ class _JadwalPageState extends State<JadwalPage>
                       controller: TextEditingController(
                         text: selectedTime == null
                             ? ''
-                            : selectedTime!.format(context),
+                            : '${selectedTime!.hour.toString().padLeft(2, '0')}:${selectedTime!.minute.toString().padLeft(2, '0')}',
                       ),
                     ),
                     const SizedBox(height: 12),
@@ -349,7 +529,39 @@ class _JadwalPageState extends State<JadwalPage>
             ),
             ElevatedButton(
               onPressed: () {
-                // Lakukan validasi atau simpan data di sini
+                // Validasi input
+                if (judulController.text.isEmpty ||
+                    ustadzController.text.isEmpty ||
+                    selectedDate == null ||
+                    selectedTime == null) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Harap isi semua field'),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                  return;
+                }
+
+                // Gabungkan tanggal dan waktu
+                final combinedDateTime = DateTime(
+                  selectedDate!.year,
+                  selectedDate!.month,
+                  selectedDate!.day,
+                  selectedTime!.hour,
+                  selectedTime!.minute,
+                );
+
+                // Buat objek Kajian
+                final kajian = Kajian(
+                  judul: judulController.text.trim(),
+                  tanggal: combinedDateTime,
+                  ustadz: ustadzController.text.trim(), 
+                  id: '',
+                );
+
+                // Simpan ke Firestore
+                _addKajianToFirestore(kajian);
                 Navigator.pop(context);
               },
               style: ElevatedButton.styleFrom(
@@ -367,7 +579,7 @@ class _JadwalPageState extends State<JadwalPage>
   void _showTambahJadwalImamDialog(BuildContext context) {
     final TextEditingController sholatController = TextEditingController();
     final TextEditingController ustadzController = TextEditingController();
-    TimeOfDay? selectedTime;
+    final TextEditingController waktuController = TextEditingController();
 
     showDialog(
       context: context,
@@ -384,14 +596,14 @@ class _JadwalPageState extends State<JadwalPage>
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text('Judul Kajian'),
+                    const Text('Waktu Sholat'),
                     const SizedBox(height: 4),
                     SizedBox(
                       height: 42,
                       child: TextField(
                         controller: sholatController,
                         decoration: const InputDecoration(
-                            hintText: 'Contoh: Sholat Shubuh',
+                            hintText: 'Contoh: Sholat Subuh',
                             hintStyle: TextStyle(
                               color: Colors.grey,
                             ),
@@ -401,28 +613,20 @@ class _JadwalPageState extends State<JadwalPage>
                       ),
                     ),
                     const SizedBox(height: 12),
-                    TextField(
-                      readOnly: true,
-                      decoration: const InputDecoration(
-                        labelText: 'Waktu',
-                        hintText: '--:--',
-                        suffixIcon: Icon(Icons.access_time),
-                      ),
-                      onTap: () async {
-                        TimeOfDay? picked = await showTimePicker(
-                          context: context,
-                          initialTime: TimeOfDay.now(),
-                        );
-                        if (picked != null) {
-                          setState(() {
-                            selectedTime = picked;
-                          });
-                        }
-                      },
-                      controller: TextEditingController(
-                        text: selectedTime == null
-                            ? ''
-                            : selectedTime!.format(context),
+                    const Text('Waktu'),
+                    const SizedBox(height: 4),
+                    SizedBox(
+                      height: 42,
+                      child: TextField(
+                        controller: waktuController,
+                        decoration: const InputDecoration(
+                            hintText: 'Contoh: 04:30 AM',
+                            hintStyle: TextStyle(
+                              color: Colors.grey,
+                            ),
+                            border: OutlineInputBorder(),
+                            contentPadding:
+                                EdgeInsets.symmetric(horizontal: 8)),
                       ),
                     ),
                     const SizedBox(height: 12),
@@ -454,7 +658,28 @@ class _JadwalPageState extends State<JadwalPage>
             ),
             ElevatedButton(
               onPressed: () {
-                // Lakukan validasi atau simpan data di sini
+                // Validasi input
+                if (sholatController.text.isEmpty ||
+                    waktuController.text.isEmpty ||
+                    ustadzController.text.isEmpty) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Harap isi semua field'),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                  return;
+                }
+
+                // Buat objek JadwalImam
+                final jadwalImam = JadwalImam(
+                  jadwalSholat: sholatController.text.trim(),
+                  ustadz: ustadzController.text.trim(),
+                  waktu: waktuController.text.trim(), id: '',
+                );
+
+                // Simpan ke Firestore
+                _addJadwalImamToFirestore(jadwalImam);
                 Navigator.pop(context);
               },
               style: ElevatedButton.styleFrom(
@@ -470,15 +695,13 @@ class _JadwalPageState extends State<JadwalPage>
   }
 
   void _showEditJadwalKajianDialog(
-      BuildContext context, Map<String, String> jadwalKajian) {
+      BuildContext context, Kajian kajian, String docId) {
     final TextEditingController judulController =
-        TextEditingController(text: jadwalKajian['judul']);
-    final TextEditingController tanggalController =
-        TextEditingController(text: jadwalKajian['hariTanggal']);
-    final TextEditingController waktuController =
-        TextEditingController(text: jadwalKajian['waktu']);
-    final TextEditingController imamController =
-        TextEditingController(text: jadwalKajian['ustadz']);
+        TextEditingController(text: kajian.judul);
+    final TextEditingController ustadzController =
+        TextEditingController(text: kajian.ustadz);
+    DateTime selectedDate = kajian.tanggal;
+    TimeOfDay selectedTime = TimeOfDay.fromDateTime(kajian.tanggal);
 
     showDialog(
       context: context,
@@ -487,43 +710,77 @@ class _JadwalPageState extends State<JadwalPage>
           shape:
               RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           title: const Text('Edit Jadwal Kajian'),
-          content: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                TextField(
-                  controller: judulController,
-                  decoration: const InputDecoration(
-                    labelText: 'Judul Kajian',
-                  ),
+          content: StatefulBuilder(
+            builder: (context, setState) {
+              return SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    TextField(
+                      controller: judulController,
+                      decoration: const InputDecoration(
+                        labelText: 'Judul Kajian',
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    TextField(
+                      readOnly: true,
+                      decoration: const InputDecoration(
+                        labelText: 'Tanggal',
+                        hintText: 'dd/mm/yyyy',
+                        suffixIcon: Icon(Icons.calendar_today),
+                      ),
+                      onTap: () async {
+                        DateTime? picked = await showDatePicker(
+                          context: context,
+                          initialDate: selectedDate,
+                          firstDate: DateTime(2020),
+                          lastDate: DateTime(2100),
+                        );
+                        if (picked != null) {
+                          setState(() {
+                            selectedDate = picked;
+                          });
+                        }
+                      },
+                      controller: TextEditingController(
+                        text: DateFormat('dd/MM/yyyy').format(selectedDate),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    TextField(
+                      readOnly: true,
+                      decoration: const InputDecoration(
+                        labelText: 'Waktu',
+                        hintText: 'HH:mm',
+                        suffixIcon: Icon(Icons.access_time),
+                      ),
+                      onTap: () async {
+                        TimeOfDay? picked = await showTimePicker(
+                          context: context,
+                          initialTime: selectedTime,
+                        );
+                        if (picked != null) {
+                          setState(() {
+                            selectedTime = picked;
+                          });
+                        }
+                      },
+                      controller: TextEditingController(
+                        text: '${selectedTime.hour.toString().padLeft(2, '0')}:${selectedTime.minute.toString().padLeft(2, '0')}',
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    TextField(
+                      controller: ustadzController,
+                      decoration: const InputDecoration(
+                        labelText: 'Nama Imam/Ustadz',
+                      ),
+                    ),
+                  ],
                 ),
-                const SizedBox(height: 8),
-                TextField(
-                  controller: tanggalController,
-                  decoration: const InputDecoration(
-                    labelText: 'Tanggal',
-                    hintText: 'dd/mm/yyyy',
-                    suffixIcon: Icon(Icons.calendar_today),
-                  ),
-                ),
-                const SizedBox(height: 8),
-                TextField(
-                  controller: waktuController,
-                  decoration: const InputDecoration(
-                    labelText: 'Waktu',
-                    hintText: '--:--',
-                    suffixIcon: Icon(Icons.access_time),
-                  ),
-                ),
-                const SizedBox(height: 8),
-                TextField(
-                  controller: imamController,
-                  decoration: const InputDecoration(
-                    labelText: 'Nama Imam/Ustadz',
-                  ),
-                ),
-              ],
-            ),
+              );
+            },
           ),
           actions: [
             TextButton(
@@ -532,22 +789,44 @@ class _JadwalPageState extends State<JadwalPage>
             ),
             ElevatedButton(
               onPressed: () {
-                // Simpan logika update data di sini
-                Navigator.pop(context);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content:
-                        Text('${jadwalKajian['judul']} berhasil diperbarui'),
-                    backgroundColor: Colors.green,
-                    duration: const Duration(seconds: 2),
-                  ),
+                // Validasi input
+                if (judulController.text.isEmpty ||
+                    ustadzController.text.isEmpty) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Harap isi semua field'),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                  return;
+                }
+
+                // Gabungkan tanggal dan waktu
+                final combinedDateTime = DateTime(
+                  selectedDate.year,
+                  selectedDate.month,
+                  selectedDate.day,
+                  selectedTime.hour,
+                  selectedTime.minute,
                 );
+
+                // Buat objek Kajian yang sudah diupdate
+                final updatedKajian = Kajian(
+                  judul: judulController.text.trim(),
+                  tanggal: combinedDateTime,
+                  ustadz: ustadzController.text.trim(), 
+                  id: '',
+                );
+
+                // Update di Firestore
+                _updateKajianInFirestore(docId, updatedKajian);
+                Navigator.pop(context);
               },
-              child: const Text('Simpan'),
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xff348E9C),
                 foregroundColor: Colors.white,
               ),
+              child: const Text('Simpan'),
             ),
           ],
         );
@@ -556,13 +835,13 @@ class _JadwalPageState extends State<JadwalPage>
   }
 
   void _showEditJadwalImamDialog(
-      BuildContext context, Map<String, String> jadwalImam) {
+      BuildContext context, JadwalImam jadwalImam, String docId) {
     final TextEditingController sholatController =
-        TextEditingController(text: jadwalImam['sholat']);
+        TextEditingController(text: jadwalImam.jadwalSholat);
     final TextEditingController waktuController =
-        TextEditingController(text: jadwalImam['waktu']);
-    final TextEditingController imamController =
-        TextEditingController(text: jadwalImam['ustadz']);
+        TextEditingController(text: jadwalImam.waktu);
+    final TextEditingController ustadzController =
+        TextEditingController(text: jadwalImam.ustadz);
 
     showDialog(
       context: context,
@@ -570,7 +849,7 @@ class _JadwalPageState extends State<JadwalPage>
         return AlertDialog(
           shape:
               RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-          title: const Text('Edit Jadwal Kajian'),
+          title: const Text('Edit Jadwal Imam'),
           content: SingleChildScrollView(
             child: Column(
               mainAxisSize: MainAxisSize.min,
@@ -578,7 +857,7 @@ class _JadwalPageState extends State<JadwalPage>
                 TextField(
                   controller: sholatController,
                   decoration: const InputDecoration(
-                    labelText: 'Waktu Solat',
+                    labelText: 'Waktu Sholat',
                   ),
                 ),
                 const SizedBox(height: 8),
@@ -587,12 +866,11 @@ class _JadwalPageState extends State<JadwalPage>
                   decoration: const InputDecoration(
                     labelText: 'Waktu',
                     hintText: '--:--',
-                    suffixIcon: Icon(Icons.access_time),
                   ),
                 ),
                 const SizedBox(height: 8),
                 TextField(
-                  controller: imamController,
+                  controller: ustadzController,
                   decoration: const InputDecoration(
                     labelText: 'Nama Imam/Ustadz',
                   ),
@@ -607,21 +885,35 @@ class _JadwalPageState extends State<JadwalPage>
             ),
             ElevatedButton(
               onPressed: () {
-                // Simpan logika update data di sini
-                Navigator.pop(context);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text('${jadwalImam['solat']} berhasil diperbarui'),
-                    backgroundColor: Colors.green,
-                    duration: const Duration(seconds: 2),
-                  ),
+                // Validasi input
+                if (sholatController.text.isEmpty ||
+                    waktuController.text.isEmpty ||
+                    ustadzController.text.isEmpty) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Harap isi semua field'),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                  return;
+                }
+
+                // Buat objek JadwalImam yang sudah diupdate
+                final updatedJadwalImam = JadwalImam(
+                  jadwalSholat: sholatController.text.trim(),
+                  ustadz: ustadzController.text.trim(),
+                  waktu: waktuController.text.trim(), id: '',
                 );
+
+                // Update di Firestore
+                _updateJadwalImamInFirestore(docId, updatedJadwalImam);
+                Navigator.pop(context);
               },
-              child: const Text('Simpan'),
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xff348E9C),
                 foregroundColor: Colors.white,
               ),
+              child: const Text('Simpan'),
             ),
           ],
         );
@@ -630,75 +922,24 @@ class _JadwalPageState extends State<JadwalPage>
   }
 
   void _showDeleteConfirmationDialog(
-      BuildContext context, Map<String, dynamic> item) {
+      BuildContext context, String itemName, String collection, String docId) {
     showDialog(
       context: context,
       builder: (context) {
         return AlertDialog(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-          ),
-          title: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              const Text('Konfirmasi Hapus'),
-              IconButton(
-                icon: const Icon(Icons.close),
-                onPressed: () => Navigator.of(context).pop(),
-              ),
-            ],
-          ),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Icon(
-                Icons.warning_amber_rounded,
-                color: Colors.red,
-                size: 60,
-              ),
-              const SizedBox(height: 16),
-              const Text(
-                'Apakah anda yakin ingin menghapus kajian ini?',
-                textAlign: TextAlign.center,
-                style: TextStyle(fontSize: 16),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                '${item['judul']})',
-                textAlign: TextAlign.center,
-                style: const TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 16,
-                ),
-              ),
-            ],
-          ),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          title: const Text('Konfirmasi Hapus'),
+          content: Text('Apakah Anda yakin ingin menghapus "$itemName"?'),
           actions: [
             TextButton(
-              onPressed: () {
-                Navigator.of(context).pop();
-              },
+              onPressed: () => Navigator.pop(context),
               child: const Text('Batal'),
             ),
             ElevatedButton(
               onPressed: () {
-                // Delete the item from the inventory list
-                setState(() {
-                  jadwalKajian = List.from(jadwalKajian);
-                  jadwalKajian.removeWhere(
-                      (element) => element['judul'] == item['judul']);
-                });
-                // Close the dialog
-                Navigator.of(context).pop();
-
-                // Show a snackbar to indicate successful deletion
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text('${item['judul']} berhasil dihapus'),
-                    backgroundColor: Colors.green,
-                    duration: const Duration(seconds: 2),
-                  ),
-                );
+                _deleteFromFirestore(collection, docId, itemName);
+                Navigator.pop(context);
               },
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.red,

@@ -1,5 +1,7 @@
 import 'package:capstone/widgets/drawer.dart';
 import 'package:flutter/material.dart';
+import 'package:capstone/data/model.dart';
+import 'package:capstone/admin_service.dart';
 
 class Kelolaadmin extends StatelessWidget {
   const Kelolaadmin({super.key});
@@ -13,35 +15,12 @@ class Kelolaadmin extends StatelessWidget {
         appBarTheme: const AppBarTheme(
           backgroundColor: Color(0xff348E9C),
         ),
-        // elevatedButtonTheme: ElevatedButtonThemeData(
-        //   style: ElevatedButton.styleFrom(
-        //     backgroundColor: const Color(0xff348E9C),
-        //   ),
-        // ),
         useMaterial3: true,
       ),
       home: const AdminPage(),
       debugShowCheckedModeBanner: false,
     );
   }
-}
-
-class Admin {
-  final int id;
-  String name;
-  String email;
-  String phone;
-  String role;
-  String password;
-
-  Admin({
-    required this.id,
-    required this.name,
-    required this.email,
-    required this.phone,
-    required this.role,
-    required this.password,
-  });
 }
 
 class AdminPage extends StatefulWidget {
@@ -52,47 +31,53 @@ class AdminPage extends StatefulWidget {
 }
 
 class _AdminPageState extends State<AdminPage> {
-  final List<Admin> _admins = [
-    Admin(
-      id: 1,
-      name: 'Ahmad Rizky',
-      email: 'ahmad.rizky@gmail.com',
-      phone: '081234567890',
-      role: 'superadmin',
-      password: 'password123',
-    ),
-    Admin(
-      id: 2,
-      name: 'Budi Santoso',
-      email: 'budi.santoso@gmail.com',
-      phone: '081234567891',
-      role: 'admin',
-      password: 'password123',
-    ),
-    Admin(
-      id: 3,
-      name: 'Citra Dewi',
-      email: 'citra.dewi@gmail.com',
-      phone: '081234567892',
-      role: 'admin',
-      password: 'password123',
-    ),
-    Admin(
-      id: 4,
-      name: 'Dian Pratama',
-      email: 'dian.pratama@gmail.com',
-      phone: '081234567893',
-      role: 'admin',
-      password: 'password123',
-    ),
-  ];
-
+  List<Admin> _admins = [];
+  List<Admin> _filteredAdmins = [];
   String _searchQuery = '';
+  bool _isLoading = true;
+  String? _errorMessage;
 
-  List<Admin> get _filteredAdmins => _admins
-      .where((admin) =>
-          admin.name.toLowerCase().contains(_searchQuery.toLowerCase()))
-      .toList();
+  @override
+  void initState() {
+    super.initState();
+    _loadAdmins();
+  }
+
+  Future<void> _loadAdmins() async {
+    try {
+      setState(() {
+        _isLoading = true;
+        _errorMessage = null;
+      });
+
+      List<Admin> admins = await AdminService.getAllAdmins();
+      setState(() {
+        _admins = admins;
+        _filteredAdmins = admins;
+        _isLoading = false;
+      });
+    } catch (e) {
+      setState(() {
+        _errorMessage = 'Gagal memuat data admin: ${e.toString()}';
+        _isLoading = false;
+      });
+    }
+  }
+
+  void _filterAdmins(String query) {
+    setState(() {
+      _searchQuery = query;
+      if (query.isEmpty) {
+        _filteredAdmins = _admins;
+      } else {
+        _filteredAdmins = _admins
+            .where((admin) =>
+                admin.name.toLowerCase().contains(query.toLowerCase()) ||
+                admin.email.toLowerCase().contains(query.toLowerCase()))
+            .toList();
+      }
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -111,11 +96,18 @@ class _AdminPageState extends State<AdminPage> {
                 color: Colors.white,
               ),
               onPressed: () {
-                Scaffold.of(context).openDrawer(); // Ini sekarang akan bekerja
+                Scaffold.of(context).openDrawer();
               },
             );
           },
         ),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.refresh, color: Colors.white),
+            onPressed: _loadAdmins,
+            tooltip: 'Refresh Data',
+          ),
+        ],
       ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
@@ -140,11 +132,7 @@ class _AdminPageState extends State<AdminPage> {
                 ),
                 contentPadding: const EdgeInsets.symmetric(vertical: 12),
               ),
-              onChanged: (value) {
-                setState(() {
-                  _searchQuery = value;
-                });
-              },
+              onChanged: _filterAdmins,
             ),
             const SizedBox(height: 16),
             SizedBox(
@@ -164,23 +152,88 @@ class _AdminPageState extends State<AdminPage> {
             ),
             const SizedBox(height: 16),
             Expanded(
-              child: ListView.builder(
-                itemCount: _filteredAdmins.length,
-                itemBuilder: (context, index) {
-                  final admin = _filteredAdmins[index];
-                  return AdminCard(
-                    admin: admin,
-                    onEdit: () => _showAddEditAdminDialog(context, admin),
-                    onDelete: admin.role == 'superadmin'
-                        ? null
-                        : () => _showDeleteConfirmationDialog(context, admin),
-                  );
-                },
-              ),
+              child: _buildAdminList(),
             ),
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildAdminList() {
+    if (_isLoading) {
+      return const Center(
+        child: CircularProgressIndicator(),
+      );
+    }
+
+    if (_errorMessage != null) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.error_outline,
+              size: 64,
+              color: Colors.grey[400],
+            ),
+            const SizedBox(height: 16),
+            Text(
+              _errorMessage!,
+              style: TextStyle(
+                color: Colors.grey[600],
+                fontSize: 16,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 16),
+            ElevatedButton(
+              onPressed: _loadAdmins,
+              child: const Text('Coba Lagi'),
+            ),
+          ],
+        ),
+      );
+    }
+
+    if (_filteredAdmins.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.person_search,
+              size: 64,
+              color: Colors.grey[400],
+            ),
+            const SizedBox(height: 16),
+            Text(
+              _searchQuery.isEmpty
+                  ? 'Belum ada data admin'
+                  : 'Tidak ditemukan admin dengan kata kunci "$_searchQuery"',
+              style: TextStyle(
+                color: Colors.grey[600],
+                fontSize: 16,
+              ),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
+      );
+    }
+
+    return ListView.builder(
+      itemCount: _filteredAdmins.length,
+      itemBuilder: (context, index) {
+        final admin = _filteredAdmins[index];
+        return AdminCard(
+          admin: admin,
+          onEdit: () => _showAddEditAdminDialog(context, admin),
+          onDelete: admin.role == 'superadmin'
+              ? null
+              : () => _showDeleteConfirmationDialog(context, admin),
+        );
+      },
     );
   }
 
@@ -190,192 +243,397 @@ class _AdminPageState extends State<AdminPage> {
     final titleText = isEditing ? 'Edit Admin' : 'Tambah Admin';
     final buttonText = isEditing ? 'Simpan Perubahan' : 'Simpan';
     final passwordLabelText =
-        isEditing ? 'Password (Biarkan jika tidak diubah)' : 'Password';
+        isEditing ? 'Password (Biarkan kosong jika tidak diubah)' : 'Password';
 
     final nameController = TextEditingController(text: admin?.name ?? '');
     final emailController = TextEditingController(text: admin?.email ?? '');
     final phoneController = TextEditingController(text: admin?.phone ?? '');
     final passwordController = TextEditingController();
 
+    // Role tetap sama untuk edit, atau 'admin' untuk tambah baru
     String role = admin?.role ?? 'admin';
+    bool isLoading = false;
+    bool _obscurePassword = true;
 
     final formKey = GlobalKey<FormState>();
 
     return showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: Text(titleText),
-        content: Form(
-          key: formKey,
-          child: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                TextFormField(
-                  controller: nameController,
-                  decoration: const InputDecoration(
-                    labelText: 'Nama Lengkap',
-                  ),
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'Nama tidak boleh kosong';
-                    }
-                    return null;
-                  },
-                ),
-                const SizedBox(height: 16),
-                TextFormField(
-                  controller: emailController,
-                  decoration: const InputDecoration(
-                    labelText: 'Email',
-                  ),
-                  keyboardType: TextInputType.emailAddress,
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'Email tidak boleh kosong';
-                    }
-                    return null;
-                  },
-                ),
-                const SizedBox(height: 16),
-                TextFormField(
-                  controller: phoneController,
-                  decoration: const InputDecoration(
-                    labelText: 'Nomor Telepon',
-                  ),
-                  keyboardType: TextInputType.phone,
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'Nomor telepon tidak boleh kosong';
-                    }
-                    return null;
-                  },
-                ),
-                const SizedBox(height: 16),
-                DropdownButtonFormField<String>(
-                  value: role,
-                  decoration: const InputDecoration(
-                    labelText: 'Role Admin',
-                  ),
-                  items: const [
-                    DropdownMenuItem(
-                      value: 'admin',
-                      child: Text('Admin'),
+      barrierDismissible: false,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (context, setState) => AlertDialog(
+          title: Text(titleText),
+          content: Form(
+            key: formKey,
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  TextFormField(
+                    controller: nameController,
+                    decoration: const InputDecoration(
+                      labelText: 'Nama Lengkap',
+                      prefixIcon: Icon(Icons.person),
                     ),
-                    DropdownMenuItem(
-                      value: 'superadmin',
-                      child: Text('Superadmin'),
+                    enabled: !isLoading,
+                    validator: (value) {
+                      if (value == null || value.trim().isEmpty) {
+                        return 'Nama tidak boleh kosong';
+                      }
+                      if (value.trim().length < 2) {
+                        return 'Nama minimal 2 karakter';
+                      }
+                      return null;
+                    },
+                  ),
+                  const SizedBox(height: 16),
+                  TextFormField(
+                    controller: emailController,
+                    decoration: const InputDecoration(
+                      labelText: 'Email',
+                      prefixIcon: Icon(Icons.email),
+                    ),
+                    keyboardType: TextInputType.emailAddress,
+                    enabled: !isLoading,
+                    validator: (value) {
+                      if (value == null || value.trim().isEmpty) {
+                        return 'Email tidak boleh kosong';
+                      }
+                      if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$')
+                          .hasMatch(value.trim())) {
+                        return 'Format email tidak valid';
+                      }
+                      return null;
+                    },
+                  ),
+                  const SizedBox(height: 16),
+                  TextFormField(
+                    controller: phoneController,
+                    decoration: const InputDecoration(
+                      labelText: 'Nomor Telepon',
+                      prefixIcon: Icon(Icons.phone),
+                    ),
+                    keyboardType: TextInputType.phone,
+                    enabled: !isLoading,
+                    validator: (value) {
+                      if (value == null || value.trim().isEmpty) {
+                        return 'Nomor telepon tidak boleh kosong';
+                      }
+                      if (value.trim().length < 10) {
+                        return 'Nomor telepon minimal 10 digit';
+                      }
+                      return null;
+                    },
+                  ),
+                  const SizedBox(height: 16),
+                  // Info role untuk admin baru
+                  if (!isEditing) ...[
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Colors.blue.shade50,
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: Colors.blue.shade200),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(
+                            Icons.info_outline,
+                            color: Colors.blue.shade600,
+                            size: 20,
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              'Admin baru akan dibuat dengan role Admin',
+                              style: TextStyle(
+                                color: Colors.blue.shade700,
+                                fontSize: 14,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                  ],
+                  // Info role untuk edit (hanya jika superadmin)
+                  if (isEditing && admin!.role == 'superadmin') ...[
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Colors.purple.shade50,
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: Colors.purple.shade200),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(
+                            Icons.admin_panel_settings,
+                            color: Colors.purple.shade600,
+                            size: 20,
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              'Role Superadmin tidak dapat diubah',
+                              style: TextStyle(
+                                color: Colors.purple.shade700,
+                                fontSize: 14,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                  ],
+                  TextFormField(
+                    controller: passwordController,
+                    decoration: InputDecoration(
+                      labelText: passwordLabelText,
+                      prefixIcon: const Icon(Icons.lock),
+                      suffixIcon: IconButton(
+                        icon: Icon(
+                          _obscurePassword ? Icons.visibility : Icons.visibility_off,
+                        ),
+                        onPressed: () {
+                          setState(() {
+                            _obscurePassword = !_obscurePassword;
+                          });
+                        },
+                      ),
+                    ),
+                    obscureText: _obscurePassword,
+                    enabled: !isLoading,
+                    validator: (value) {
+                      if (!isEditing && (value == null || value.isEmpty)) {
+                        return 'Password tidak boleh kosong';
+                      }
+                      if (value != null &&
+                          value.isNotEmpty &&
+                          value.length < 6) {
+                        return 'Password minimal 6 karakter';
+                      }
+                      return null;
+                    },
+                  ),
+                  if (isEditing) ...[
+                    const SizedBox(height: 8),
+                    Text(
+                      'Kosongkan password jika tidak ingin mengubah password',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.grey[600],
+                        fontStyle: FontStyle.italic,
+                      ),
                     ),
                   ],
-                  onChanged: (value) {
-                    if (value != null) {
-                      role = value;
-                    }
-                  },
-                ),
-                const SizedBox(height: 16),
-                TextFormField(
-                  controller: passwordController,
-                  decoration: InputDecoration(
-                    labelText: passwordLabelText,
-                  ),
-                  obscureText: true,
-                  validator: (value) {
-                    if (!isEditing && (value == null || value.isEmpty)) {
-                      return 'Password tidak boleh kosong';
-                    }
-                    return null;
-                  },
-                ),
-              ],
+                  if (isLoading) ...[
+                    const SizedBox(height: 16),
+                    const Center(
+                      child: CircularProgressIndicator(),
+                    ),
+                  ],
+                ],
+              ),
             ),
           ),
+          actions: [
+            TextButton(
+              onPressed: isLoading ? null : () => Navigator.of(context).pop(),
+              child: const Text('Batal'),
+            ),
+            ElevatedButton(
+              onPressed: isLoading
+                  ? null
+                  : () async {
+                      if (formKey.currentState!.validate()) {
+                        setState(() {
+                          isLoading = true;
+                        });
+
+                        try {
+                          if (isEditing) {
+                            // Update admin
+                            // Cek apakah password diubah
+                            bool passwordChanged = passwordController.text.isNotEmpty;
+                            
+                            Admin updatedAdmin = admin!.copyWith(
+                              name: nameController.text.trim(),
+                              email: emailController.text.trim(),
+                              phone: phoneController.text.trim(),
+                              role: role, // Tetap menggunakan role yang sama
+                              updatedAt: DateTime.now(),
+                              // Jika password tidak diubah, gunakan password lama
+                              password: passwordChanged ? passwordController.text : admin.password,
+                            );
+
+                            // Panggil updateAdmin dengan parameter updatePassword
+                            await AdminService.updateAdmin(
+                              admin.id, 
+                              updatedAdmin, 
+                              updatePassword: passwordChanged
+                            );
+                          } else {
+                            // Tambah admin baru - otomatis role 'admin'
+                            Admin newAdmin = Admin(
+                              id: '', // ID akan diset oleh Firestore
+                              name: nameController.text.trim(),
+                              email: emailController.text.trim(),
+                              phone: phoneController.text.trim(),
+                              role: 'admin', // Selalu admin untuk penambahan baru
+                              password: passwordController.text, // Password akan di-hash di AdminService
+                              createdAt: DateTime.now(),
+                              updatedAt: DateTime.now(),
+                            );
+
+                            await AdminService.addAdmin(newAdmin);
+                          }
+
+                          // Tutup dialog SEBELUM menampilkan snackbar
+                          Navigator.of(dialogContext).pop();
+
+                          // Refresh data
+                          _loadAdmins();
+
+                          // Tampilkan snackbar sukses
+                          if (mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text(isEditing
+                                    ? 'Admin berhasil diperbarui'
+                                    : 'Admin berhasil ditambahkan'),
+                                backgroundColor: Colors.green,
+                                duration: const Duration(seconds: 3),
+                              ),
+                            );
+                          }
+                        } catch (e) {
+                          setState(() {
+                            isLoading = false;
+                          });
+
+                          if (mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text('Error: ${e.toString()}'),
+                                backgroundColor: Colors.red,
+                                duration: const Duration(seconds: 4),
+                              ),
+                            );
+                          }
+                        }
+                      }
+                    },
+              child: Text(buttonText),
+            ),
+          ],
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Batal'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              if (formKey.currentState!.validate()) {
-                if (isEditing) {
-                  setState(() {
-                    admin.name = nameController.text;
-                    admin.email = emailController.text;
-                    admin.phone = phoneController.text;
-                    admin.role = role;
-                    if (passwordController.text.isNotEmpty) {
-                      admin.password = passwordController.text;
-                    }
-                  });
-                } else {
-                  setState(() {
-                    _admins.add(
-                      Admin(
-                        id: _admins.isNotEmpty ? _admins.last.id + 1 : 1,
-                        name: nameController.text,
-                        email: emailController.text,
-                        phone: phoneController.text,
-                        role: role,
-                        password: passwordController.text,
-                      ),
-                    );
-                  });
-                }
-                Navigator.of(context).pop();
-              }
-            },
-            child: Text(buttonText),
-          ),
-        ],
       ),
     );
   }
 
   Future<void> _showDeleteConfirmationDialog(
       BuildContext context, Admin admin) async {
+    bool isLoading = false;
+
     return showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Konfirmasi Hapus'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Icon(
-              Icons.warning_amber_rounded,
-              color: Colors.red,
-              size: 50,
+      barrierDismissible: false,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (context, setState) => AlertDialog(
+          title: const Text('Konfirmasi Hapus'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(
+                Icons.warning_amber_rounded,
+                color: Colors.red,
+                size: 50,
+              ),
+              const SizedBox(height: 16),
+              const Text('Apakah anda yakin ingin menghapus admin ini?'),
+              const SizedBox(height: 8),
+              Text(
+                admin.name,
+                style: const TextStyle(fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                admin.email,
+                style: TextStyle(
+                  color: Colors.grey[600],
+                  fontSize: 14,
+                ),
+              ),
+              if (isLoading) ...[
+                const SizedBox(height: 16),
+                const CircularProgressIndicator(),
+              ],
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed:
+                  isLoading ? null : () => Navigator.of(dialogContext).pop(),
+              child: const Text('Batal'),
             ),
-            const SizedBox(height: 16),
-            const Text('Apakah anda yakin ingin menghapus admin ini?'),
-            const SizedBox(height: 8),
-            Text(
-              admin.name,
-              style: const TextStyle(fontWeight: FontWeight.bold),
+            ElevatedButton(
+              onPressed: isLoading
+                  ? null
+                  : () async {
+                      setState(() {
+                        isLoading = true;
+                      });
+
+                      try {
+                        await AdminService.deleteAdmin(admin.id);
+
+                        // Tutup dialog SEBELUM menampilkan snackbar
+                        Navigator.of(dialogContext).pop();
+
+                        // Refresh data
+                        _loadAdmins();
+
+                        // Tampilkan snackbar sukses
+                        if (mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('Admin berhasil dihapus'),
+                              backgroundColor: Colors.green,
+                              duration: Duration(seconds: 3),
+                            ),
+                          );
+                        }
+                      } catch (e) {
+                        setState(() {
+                          isLoading = false;
+                        });
+
+                        if (mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text('Error: ${e.toString()}'),
+                              backgroundColor: Colors.red,
+                              duration: const Duration(seconds: 4),
+                            ),
+                          );
+                        }
+                      }
+                    },
+              style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+              child: const Text(
+                'Hapus',
+                style: TextStyle(color: Colors.white),
+              ),
             ),
           ],
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Batal'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              setState(() {
-                _admins.removeWhere((a) => a.id == admin.id);
-              });
-              Navigator.of(context).pop();
-            },
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-            child: const Text(
-              'Hapus',
-              style: TextStyle(color: Colors.white),
-            ),
-          ),
-        ],
       ),
     );
   }
@@ -406,30 +664,76 @@ class AdminCard extends StatelessWidget {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text(
-                  admin.name,
-                  style: const TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
+                Expanded(
+                  child: Text(
+                    admin.name,
+                    style: const TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ),
+                const SizedBox(width: 8),
                 _buildRoleChip(),
               ],
             ),
             const SizedBox(height: 8),
-            Text(
-              admin.email,
-              style: TextStyle(
-                color: Colors.grey[700],
-              ),
+            Row(
+              children: [
+                const Icon(
+                  Icons.email,
+                  size: 16,
+                  color: Colors.grey,
+                ),
+                const SizedBox(width: 4),
+                Expanded(
+                  child: Text(
+                    admin.email,
+                    style: TextStyle(
+                      color: Colors.grey[700],
+                      fontSize: 14,
+                    ),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ],
             ),
             const SizedBox(height: 4),
+            Row(
+              children: [
+                const Icon(
+                  Icons.phone,
+                  size: 16,
+                  color: Colors.grey,
+                ),
+                const SizedBox(width: 4),
+                Text(
+                  admin.phone ?? '-',
+                  style: TextStyle(
+                    color: Colors.grey[700],
+                    fontSize: 14,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
             Text(
-              admin.phone,
+              'Dibuat: ${_formatDate(admin.createdAt)}',
               style: TextStyle(
-                color: Colors.grey[700],
+                color: Colors.grey[500],
+                fontSize: 12,
               ),
             ),
+            if (admin.updatedAt != null) ...[
+              Text(
+                'Diupdate: ${_formatDate(admin.updatedAt!)}',
+                style: TextStyle(
+                  color: Colors.grey[500],
+                  fontSize: 12,
+                ),
+              ),
+            ],
             const SizedBox(height: 16),
             Row(
               mainAxisAlignment: MainAxisAlignment.end,
@@ -467,7 +771,7 @@ class AdminCard extends StatelessWidget {
   }
 
   Widget _buildRoleChip() {
-    final isSuper = admin.role == 'superadmin';
+    final isSuper = admin.role.toLowerCase() == 'superadmin';
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
@@ -479,9 +783,13 @@ class AdminCard extends StatelessWidget {
         style: TextStyle(
           color: isSuper ? Colors.white : const Color(0xFF28a745),
           fontWeight: FontWeight.w500,
-          fontSize: 14,
+          fontSize: 12,
         ),
       ),
     );
+  }
+
+  String _formatDate(DateTime date) {
+    return '${date.day}/${date.month}/${date.year}';
   }
 }

@@ -1,5 +1,13 @@
 import 'package:capstone/widgets/drawerGuest.dart';
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+
+// Extension untuk capitalize string
+extension StringExtension on String {
+  String capitalize() {
+    return "${this[0].toUpperCase()}${substring(1).toLowerCase()}";
+  }
+}
 
 class PengajuanbarangGuest extends StatelessWidget {
   const PengajuanbarangGuest({super.key});
@@ -29,6 +37,7 @@ class PeminjamanItem {
   final String requestDate;
   String status; // Changed to non-final to allow status updates
   bool isReturned; // Added property to track return status
+  final String documentId; // Added to track Firestore document ID
 
   PeminjamanItem({
     required this.id,
@@ -37,7 +46,69 @@ class PeminjamanItem {
     required this.requestDate,
     required this.status,
     this.isReturned = false, // Default is not returned
+    required this.documentId,
   });
+
+  // Factory constructor to create PeminjamanItem from Firestore document
+  factory PeminjamanItem.fromFirestore(DocumentSnapshot doc) {
+    Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
+    
+    // Format tanggal dari Firestore timestamp
+    String formattedDate = '';
+    if (data['tanggalPengajuan'] != null) {
+      if (data['tanggalPengajuan'] is Timestamp) {
+        DateTime date = (data['tanggalPengajuan'] as Timestamp).toDate();
+        formattedDate = '${date.day} ${_getMonthName(date.month)} ${date.year}';
+      } else {
+        formattedDate = data['tanggalPengajuan'].toString();
+      }
+    }
+    
+    // Tentukan status pengembalian berdasarkan status dan tanggal pengembalian
+    bool isReturned = false;
+    String currentStatus = data['status']?.toString().toLowerCase() ?? '';
+    
+    // Jika status adalah 'dikembalikan', maka item sudah dikembalikan
+    if (currentStatus == 'dikembalikan') {
+      isReturned = true;
+    }
+    // Jika ada tanggal pengembalian tapi status belum 'dikembalikan', 
+    // berarti sedang menunggu konfirmasi
+    else if (data['tanggalPengembalian'] != null && data['tanggalPengembalian'] != 'null') {
+      isReturned = false; // Belum benar-benar dikembalikan, masih menunggu konfirmasi admin
+    }
+    
+    return PeminjamanItem(
+      id: data['ticketId'] ?? data['idBarang'] ?? '',
+      name: data['namaBarang'] ?? '',
+      borrower: data['peminjam'] ?? '',
+      requestDate: formattedDate,
+      status: data['status'] ?? '',
+      isReturned: isReturned,
+      documentId: doc.id,
+    );
+  }
+  
+  // Helper method untuk mengubah angka bulan ke nama bulan
+  static String _getMonthName(int month) {
+    const months = [
+      '', 'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
+      'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'
+    ];
+    return months[month];
+  }
+
+  // Method to convert PeminjamanItem to Map for Firestore
+  Map<String, dynamic> toMap() {
+    return {
+      'ticketId': id,
+      'namaBarang': name,
+      'peminjam': borrower,
+      'tanggalPengajuan': requestDate,
+      'status': status,
+      'tanggalPengembalian': isReturned ? Timestamp.now() : null,
+    };
+  }
 }
 
 // Main Page
@@ -49,47 +120,95 @@ class PengajuanBarangPage extends StatefulWidget {
 }
 
 class _PengajuanBarangPageState extends State<PengajuanBarangPage> {
-  // Sample data
-  final List<PeminjamanItem> _allItems = [
-    PeminjamanItem(
-      id: 'BRW-2025-001',
-      name: 'Portable Speaker',
-      borrower: 'Ahmad',
-      requestDate: '15 Mei 2025',
-      status: 'Tertunda',
-    ),
-    PeminjamanItem(
-      id: 'BRW-2025-002',
-      name: 'Projektor',
-      borrower: 'Umar',
-      requestDate: '14 Mei 2025',
-      status: 'Disetujui',
-    ),
-    PeminjamanItem(
-      id: 'BRW-2025-003',
-      name: 'Kursi Kayu',
-      borrower: 'Umar',
-      requestDate: '14 Mei 2025',
-      status: 'Ditolak',
-    ),
-    PeminjamanItem(
-      id: 'BRW-2025-004',
-      name: 'Tempat Alquran',
-      borrower: 'Umar',
-      requestDate: '14 Mei 2025',
-      status: 'Tertunda',
-    ),
-  ];
+  // Firestore instance
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  
+  // List to store items from Firestore
+  List<PeminjamanItem> _allItems = [];
+  bool _isLoading = true;
 
   String _selectedFilter = 'Semua';
-  final List<String> _filters = ['Semua', 'Tertunda', 'Disetujui', 'Ditolak'];
+  final List<String> _filters = ['Semua', 'tertunda', 'disetujui', 'ditolak', 'menunggu konfirmasi pengembalian', 'dikembalikan'];
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchPeminjamanData();
+  }
+
+  // Fetch data from Firestore
+  Future<void> _fetchPeminjamanData() async {
+    try {
+      setState(() {
+        _isLoading = true;
+      });
+
+      QuerySnapshot snapshot = await _firestore.collection('peminjaman').get();
+      
+      List<PeminjamanItem> items = snapshot.docs.map((doc) {
+        return PeminjamanItem.fromFirestore(doc);
+      }).toList();
+
+      setState(() {
+        _allItems = items;
+        _isLoading = false;
+      });
+    } catch (e) {
+      print('Error fetching data: $e');
+      setState(() {
+        _isLoading = false;
+      });
+      
+      // Show error message to user
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Gagal memuat data: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
+  // Update item return status in Firestore
+  Future<void> _updateReturnStatus(PeminjamanItem item) async {
+    try {
+      // Update di Firestore dengan status "Menunggu Konfirmasi Pengembalian"
+      await _firestore.collection('peminjaman').doc(item.documentId).update({
+        'tanggalPengembalian': Timestamp.now(),
+        'status': 'Menunggu Konfirmasi Pengembalian',
+      });
+      
+      // Update local state
+      setState(() {
+        item.status = 'Menunggu Konfirmasi Pengembalian';
+        // Jangan set isReturned = true karena belum dikonfirmasi admin
+        item.isReturned = false;
+      });
+      
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Pengembalian ${item.name} telah diajukan! Menunggu konfirmasi admin.'),
+          backgroundColor: Colors.orange,
+        ),
+      );
+    } catch (e) {
+      print('Error updating return status: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Gagal mengajukan pengembalian: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
 
   // Filter items based on selected filter
   List<PeminjamanItem> get _filteredItems {
     if (_selectedFilter == 'Semua') {
       return _allItems;
     } else {
-      return _allItems.where((item) => item.status == _selectedFilter).toList();
+      return _allItems.where((item) => 
+        item.status.toLowerCase() == _selectedFilter.toLowerCase()).toList();
     }
   }
 
@@ -111,6 +230,13 @@ class _PengajuanBarangPageState extends State<PengajuanBarangPage> {
           ),
         title: const Text('Masjid Al-Waraq'),
         backgroundColor: Theme.of(context).primaryColor,
+        actions: [
+          // Refresh button
+          IconButton(
+            icon: const Icon(Icons.refresh),
+            onPressed: _fetchPeminjamanData,
+          ),
+        ],
       ),
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -137,7 +263,7 @@ class _PengajuanBarangPageState extends State<PengajuanBarangPage> {
                   padding: const EdgeInsets.only(right: 8.0),
                   child: FilterChip(
                     selected: _selectedFilter == filter,
-                    label: Text(filter),
+                    label: Text(filter == 'Semua' ? filter : filter.capitalize()),
                     onSelected: (selected) {
                       setState(() {
                         _selectedFilter = filter;
@@ -186,23 +312,56 @@ class _PengajuanBarangPageState extends State<PengajuanBarangPage> {
 
           // Item List
           Expanded(
-            child: ListView.builder(
-              padding: const EdgeInsets.all(16),
-              itemCount: _filteredItems.length,
-              itemBuilder: (context, index) {
-                final item = _filteredItems[index];
-                return ItemCard(
-                  key: Key(item.id), // Use the item's ID as the key
-                  item: item,
-                  onReturnConfirmed: () {
-                    // Need to call setState to refresh the list when an item is returned
-                    setState(() {
-                      // Item will be updated inside the ItemCard widget
-                    });
-                  },
-                );
-              },
-            ),
+            child: _isLoading
+                ? const Center(
+                    child: CircularProgressIndicator(),
+                  )
+                : _filteredItems.isEmpty
+                    ? Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(
+                              Icons.inbox_outlined,
+                              size: 64,
+                              color: Colors.grey[400],
+                            ),
+                            const SizedBox(height: 16),
+                            Text(
+                              'Tidak ada data peminjaman',
+                              style: TextStyle(
+                                fontSize: 16,
+                                color: Colors.grey[600],
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            ElevatedButton.icon(
+                              onPressed: _fetchPeminjamanData,
+                              icon: const Icon(Icons.refresh),
+                              label: const Text('Muat Ulang'),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Theme.of(context).primaryColor,
+                                foregroundColor: Colors.white,
+                              ),
+                            ),
+                          ],
+                        ),
+                      )
+                    : RefreshIndicator(
+                        onRefresh: _fetchPeminjamanData,
+                        child: ListView.builder(
+                          padding: const EdgeInsets.all(16),
+                          itemCount: _filteredItems.length,
+                          itemBuilder: (context, index) {
+                            final item = _filteredItems[index];
+                            return ItemCard(
+                              key: Key(item.documentId), // Use document ID as key
+                              item: item,
+                              onReturnConfirmed: () => _updateReturnStatus(item),
+                            );
+                          },
+                        ),
+                      ),
           ),
         ],
       ),
@@ -227,53 +386,72 @@ class ItemCard extends StatefulWidget {
 
 class _ItemCardState extends State<ItemCard> {
   Color get _statusColor {
-    if (widget.item.isReturned) {
-      return Colors.blue;
-    }
+    String status = widget.item.status.toLowerCase();
     
-    switch (widget.item.status) {
-      case 'Disetujui':
+    switch (status) {
+      case 'disetujui':
         return Colors.green;
-      case 'Ditolak':
+      case 'ditolak':
         return Colors.red;
-      case 'Tertunda':
+      case 'tertunda':
         return Colors.orange;
+      case 'menunggu konfirmasi pengembalian':
+        return Colors.purple;
+      case 'dikembalikan':
+        return Colors.blue;
       default:
         return Colors.grey;
     }
   }
 
   Color get _cardColor {
-    if (widget.item.isReturned) {
-      return Colors.blue.shade50;
-    }
+    String status = widget.item.status.toLowerCase();
     
-    switch (widget.item.status) {
-      case 'Disetujui':
+    switch (status) {
+      case 'disetujui':
         return Colors.green.shade50;
-      case 'Ditolak':
+      case 'ditolak':
         return Colors.red.shade50;
-      case 'Tertunda':
+      case 'tertunda':
         return Colors.amber.shade50;
+      case 'menunggu konfirmasi pengembalian':
+        return Colors.purple.shade50;
+      case 'dikembalikan':
+        return Colors.blue.shade50;
       default:
         return Colors.white;
     }
   }
 
   IconData get _statusIcon {
-    if (widget.item.isReturned) {
-      return Icons.assignment_returned;
-    }
+    String status = widget.item.status.toLowerCase();
     
-    switch (widget.item.status) {
-      case 'Disetujui':
+    switch (status) {
+      case 'disetujui':
         return Icons.check_circle;
-      case 'Ditolak':
+      case 'ditolak':
         return Icons.cancel;
-      case 'Tertunda':
+      case 'tertunda':
         return Icons.access_time;
+      case 'menunggu konfirmasi pengembalian':
+        return Icons.pending_actions;
+      case 'dikembalikan':
+        return Icons.assignment_returned;
       default:
         return Icons.help;
+    }
+  }
+
+  String get _displayStatus {
+    String status = widget.item.status.toLowerCase();
+    
+    switch (status) {
+      case 'menunggu konfirmasi pengembalian':
+        return 'Menunggu Konfirmasi Pengembalian';
+      case 'dikembalikan':
+        return 'Dikembalikan';
+      default:
+        return widget.item.status.capitalize();
     }
   }
 
@@ -332,9 +510,7 @@ class _ItemCardState extends State<ItemCard> {
                       Icon(_statusIcon, size: 16, color: _statusColor),
                       const SizedBox(width: 4),
                       Text(
-                        widget.item.isReturned 
-                            ? 'Barang Sudah Dikembalikan' 
-                            : widget.item.status,
+                        _displayStatus,
                         style: TextStyle(
                           color: _statusColor,
                           fontWeight: FontWeight.bold,
@@ -354,8 +530,8 @@ class _ItemCardState extends State<ItemCard> {
               ),
             ),
             
-            // Return confirmation button (only for approved items that haven't been returned)
-            if (widget.item.status == 'Disetujui' && !widget.item.isReturned)
+            // Return confirmation button (only for approved items that haven't been returned or are waiting for confirmation)
+            if (widget.item.status.toLowerCase() == 'disetujui')
               Padding(
                 padding: const EdgeInsets.only(left: 8.0),
                 child: Column(
@@ -379,7 +555,7 @@ class _ItemCardState extends State<ItemCard> {
                           builder: (context) => AlertDialog(
                             title: const Text('Konfirmasi Pengembalian'),
                             content: Text(
-                              'Apakah Anda yakin ingin mengembalikan ${widget.item.name}?',
+                              'Apakah Anda yakin ingin mengajukan pengembalian ${widget.item.name}?\n\nStatus akan berubah menjadi "Menunggu Konfirmasi Pengembalian" dan menunggu admin untuk mengonfirmasi.',
                             ),
                             actions: [
                               TextButton(
@@ -394,24 +570,11 @@ class _ItemCardState extends State<ItemCard> {
                                   // Close the dialog
                                   Navigator.pop(context);
                                   
-                                  // Update the item status
-                                  setState(() {
-                                    widget.item.isReturned = true;
-                                  });
-                                  
-                                  // Notify parent to refresh the list
+                                  // Call the callback to update Firestore
                                   widget.onReturnConfirmed();
-                                  
-                                  // Show success message
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(
-                                      content: Text('${widget.item.name} telah dikembalikan!'),
-                                      backgroundColor: Colors.blue,
-                                    ),
-                                  );
                                 },
                                 child: const Text(
-                                  'Konfirmasi',
+                                  'Ajukan Pengembalian',
                                   style: TextStyle(color: Colors.white),
                                 ),
                               ),
@@ -427,7 +590,7 @@ class _ItemCardState extends State<ItemCard> {
                           ),
                           SizedBox(height: 4),
                           Text(
-                            'Konfirmasi\nPengembalian',
+                            'Ajukan\nPengembalian',
                             style: TextStyle(
                               color: Colors.white,
                               fontSize: 10,
